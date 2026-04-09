@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COPOM Supervisores</title>
+    <style>
+        :root {
+            --primary-color: #1a202c; --secondary-color: #2b6cb0; 
+            --bg-color: #f0f2f5; --text-color: #2d3748;
+            --cfp-bg: #fee2e2; --cfp-text: #b91c1c;
+            --cgp-bg: #f0fdf4; --cgp-text: #166534;
+        }
+
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
+
+        /* TELA DE LOGIN */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; transition: 0.3s opacity; }
+        .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; width: 300px; color: #2d3748; }
+        .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 5px; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 12px; background-color: #2b6cb0; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        .login-box button:hover { background-color: #1a365d; }
+
+        /* MENU LATERAL E DESTAQUE DE ABA ATIVA */
+        #app-container { display: none; width: 100%; height: 100%; }
+        .sidebar { width: 250px; background-color: var(--primary-color); color: white; display: flex; flex-direction: column; z-index: 10; transition: background 0.3s; }
+        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid #2d3748; }
+        .sidebar-header h2 { margin: 0; font-size: 20px; color: #63b3ed; }
+        .sidebar-header p { margin: 5px 0 0; font-size: 11px; color: #a0aec0; }
+        #tagAdmin { display: none; background: #d69e2e; color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; margin-top: 5px; }
+
+        .menu-items { flex-grow: 1; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+        .menu-btn { background: none; border: none; color: #a0aec0; padding: 15px 20px; text-align: left; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .menu-btn:hover { background-color: #2d3748; color: white; }
+        
+        /* DESTAQUE VISUAL DA ABA ATIVA (DOURADO PARA SUPERVISORES) */
+        .menu-btn.active { background-color: #d69e2e; color: white; border-left: 5px solid #ecc94b; box-shadow: inset 0px 0px 10px rgba(0,0,0,0.2); }
+
+        .sidebar-footer { padding: 20px; border-top: 1px solid #2d3748; }
+        .btn-global { width: 100%; padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; margin-bottom: 10px; font-size: 12px;}
+        .btn-backup { background-color: #38a169; }
+        .btn-logout { background-color: #e53e3e; margin-bottom: 0;}
+
+        /* --- MODO COMANDO: COR DA BARRA LATERAL PARA O ADMIN --- */
+        body.role-admin .sidebar { background: linear-gradient(180deg, #4a1414 0%, #220505 100%); }
+        body.role-admin .sidebar-header { border-bottom: 1px solid #7b2c2c; }
+        body.role-admin .sidebar-footer { border-top: 1px solid #7b2c2c; }
+        body.role-admin .menu-btn:hover:not(.active) { background-color: #7b2c2c; color: white; }
+        body.role-admin .sidebar-header h2 { color: #fbd38d; }
+
+        /* CONTEÚDO PRINCIPAL */
+        .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; position: relative; }
+        .screen { display: none; animation: fadeIn 0.3s; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); min-height: 80vh; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* COMPONENTES GERAIS */
+        h2 { margin-top: 0; color: var(--text-color); border-bottom: 2px solid #edf2f7; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
+        .form-section { background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; align-items: end; }
+        label { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #4a5568; margin-bottom: 5px; display: block; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 13px; box-sizing: border-box; font-family: inherit;}
+        
+        .mono-font { font-family: 'Courier New', Courier, monospace; font-weight: 600; letter-spacing: 0.5px; color: #2d3748; }
+
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
+        .btn:hover { opacity: 0.9; }
+        .btn-save { background-color: #48bb78; width: 100%; }
+        .btn-print { background-color: #718096; }
+        .btn-del { background-color: #e53e3e; padding: 5px 10px; font-size: 11px; }
+        .btn-edit { background-color: #3182ce; padding: 5px 10px; font-size: 11px; }
+        .btn-restore { background-color: #d69e2e; color: white; border: none; cursor: pointer; border-radius: 5px; font-weight: bold;}
+        
+        .btn-status-ok { background-color: #f0fdf4; color: #166534; border: 1px solid #86efac; padding: 5px; font-size: 11px; width: 80px; border-radius: 4px; font-weight: bold;}
+        .btn-status-pend { background-color: #fffaf0; color: #dd6b20; border: 1px solid #fbd38d; padding: 5px; font-size: 11px; width: 80px; border-radius: 4px; font-weight: bold; animation: pulse 2s infinite;}
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(221, 107, 32, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(221, 107, 32, 0); } 100% { box-shadow: 0 0 0 0 rgba(221, 107, 32, 0); } }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; position: relative; }
+        th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
+        th { background-color: #2d3748; color: white; position: sticky; top: -25px; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        tr:nth-child(even) { background-color: #f7fafc; }
+        tbody tr { transition: all 0.2s ease; }
+        tbody tr:hover { background-color: #ebf8ff !important; box-shadow: inset 4px 0 0 0 #3182ce; }
+
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-top: 20px; margin-bottom: 30px; }
+        .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .card-icon { font-size: 35px; }
+        .card-info h3 { margin: 0; font-size: 26px; color: #2d3748; }
+        .card-info p { margin: 0; font-size: 11px; color: #718096; font-weight: bold; text-transform: uppercase; }
+
+        .badge-siopm { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .badge-aberto { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+        .badge-encerrado { background-color: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+
+        .secao-titulo { grid-column: 1 / -1; margin-top: 10px; margin-bottom: 10px; border-bottom: 2px solid #cbd5e1; color: #2d3748; padding-bottom: 5px; }
+        .grid-supervisao { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .card-sup { background: var(--primary-color); color: white; padding: 15px; border-radius: 8px; border-bottom: 4px solid #d4af37; display: flex; justify-content: space-between; align-items: center; transition: transform 0.2s, box-shadow 0.2s; }
+        .card-sup:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+        .card-sup .funcao { font-size: 10px; font-weight: 900; opacity: 0.8; display: block; color: #fbd38d;}
+        .card-sup .nome { font-size: 16px; font-weight: 700; }
+        
+        .bloco-bpm { border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 25px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .header-bpm { background: #2b6cb0; padding: 10px 15px; font-weight: bold; color: white; text-transform: uppercase; font-size: 14px; letter-spacing: 0.5px;}
+        .linha-militar { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px solid #f1f5f9; transition: background-color 0.2s, border-left 0.2s; border-left: 4px solid transparent;}
+        .linha-militar.cfp { border-left-color: #e53e3e; background: #fffafaf;} 
+        .linha-militar.cgp { padding-left: 20px; border-left-color: #38a169;}
+        .linha-militar:hover { background-color: #ebf8ff; border-left-color: #3182ce; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .badge-cfp { background: var(--cfp-bg); color: var(--cfp-text); border: 1px solid #fca5a5;} 
+        .badge-cgp { background: var(--cgp-bg); color: var(--cgp-text); border: 1px solid #86efac;}
+        .info-funcao { width: 60px; } .info-nome { flex-grow: 1; font-weight: bold; } .info-cia { width: 80px; text-align: center; } .info-tel { width: 130px; color: #718096; }
+
+        #printIndividual, #printRelatorioGeral { display: none; }
+        body:not(.role-admin) .only-admin { display: none !important; }
+        body.role-leitura .hide-leitura { display: none !important; }
+        body.status-pendente .menu-items button:not(:first-child):not(.btn-logout) { display: none !important; }
+        body.status-pendente #box-relatorio-dashboard { display: none !important; }
+
+        @media print {
+            .sidebar, .form-section, #buscaEfetivo, #buscaOcorrencia, #buscaGuincho, .filtros-siopm, details, .no-print, .menu-items { display: none !important; }
+            body.printing-individual .main-content { display: none !important; }
+            body.printing-individual #printIndividual { display: block !important; }
+            body.printing-geral .main-content { display: none !important; }
+            body.printing-geral #printRelatorioGeral { display: block !important; }
+            html, body { height: auto !important; overflow: visible !important; display: block !important; background-color: white !important; margin: 0 !important; padding: 0 !important; }
+            @page { margin: 1cm; size: A4 portrait; }
+            .print-header { border-bottom: 4px solid #2b6cb0; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .print-section-title { color: white !important; padding: 10px 15px; margin: 0 0 15px 0; border-radius: 4px; font-size: 14px; text-transform: uppercase; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; page-break-after: avoid; }
+            .print-title-mapa { background-color: #2b6cb0 !important; }
+            .print-title-oco { background-color: #e53e3e !important; }
+            .print-title-guincho { background-color: #d69e2e !important; }
+            .print-title-siopm { background-color: #38a169 !important; }
+            .print-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 25px; page-break-inside: auto; }
+            .print-table th { background-color: #2d3748 !important; color: white !important; padding: 8px; text-align: left; border: 1px solid #cbd5e1; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; position: static !important; }
+            .print-table td { padding: 8px; border: 1px solid #cbd5e1; color: #2d3748; }
+            .print-table tr { page-break-inside: avoid; page-break-after: auto; }
+            .print-table tr:nth-child(even) { background-color: #f7fafc !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .print-oco-card { background-color: #fff5f5 !important; border: 1px solid #feb2b2; border-left: 5px solid #e53e3e !important; padding: 15px; margin-top: 10px; margin-bottom: 15px; border-radius: 4px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; page-break-inside: avoid; }
+            .print-bpm-header { background-color: #edf2f7 !important; color: #2b6cb0 !important; font-weight: bold; padding: 8px 10px; border-left: 4px solid #2b6cb0 !important; margin: 15px 0 5px 0; font-size: 13px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; page-break-after: avoid;}
+            .print-row-cfp { background-color: #fff5f5 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+
+        #modal-inatividade { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center; }
+        .modal-box { background: white; padding: 30px; border-radius: 8px; text-align: center; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+
+    <div id="modal-inatividade">
+        <div class="modal-box">
+            <h2 style="color: #e53e3e; justify-content: center; border-bottom: none;">⚠️ Sessão Expirada</h2>
+            <p style="color: #4a5568; font-size: 14px; margin-bottom: 20px;">Por questões de segurança, a sua sessão foi encerrada devido a 15 minutos de inatividade no terminal.</p>
+            <button class="btn btn-save" style="background-color: #2b6cb0;" onclick="location.reload()">Fazer Login Novamente</button>
+        </div>
+    </div>
+
+    <div id="login-screen">
+        <div class="login-box">
+            <h1 style="color:#2b6cb0; margin-top:0;">COPOM Supervisores</h1>
+            <p style="color:#718096; font-size:13px; margin-bottom:25px;">Comando & Controle - Acesso Restrito</p>
+            
+            <input type="email" id="loginEmail" placeholder="Digite o seu e-mail">
+            <input type="password" id="loginSenha" placeholder="Digite a sua senha">
+            <button onclick="fazerLogin()">Acessar Sistema</button>
+
+            <div style="margin: 15px 0; color: #a0aec0; font-size: 12px; font-weight: bold;">OU</div>
+
+            <button onclick="fazerLoginGoogle()" style="background-color: #4285F4; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px;">
+                <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24">
+                    <path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Entrar com o Google
+            </button>
+
+            <p id="msgErroLogin" style="color:#e53e3e; font-size:12px; display:none; margin-top:15px; font-weight:bold;">Usuário ou senha incorretos.</p>
+        </div>
+    </div>
+
+    <div id="printIndividual"></div>
+    <div id="printRelatorioGeral"></div>
+
+    <div id="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>COPOM</h2><p>Supervisores ☁️</p>
+                <div id="tagAdmin">👑 PRIVILÉGIO ADMIN</div>
+            </div>
+            <div class="menu-items">
+                <button class="menu-btn active" onclick="abrirTela('tela-dashboard', this)">📊 Painel Geral</button>
+                <button class="menu-btn" onclick="abrirTela('tela-siopm', this)">📻 SIOPM Inoperante</button>
+                <button class="menu-btn" onclick="abrirTela('tela-mapa', this)">👮 Mapa de Força</button>
+                <button class="menu-btn" onclick="abrirTela('tela-ocorrencias', this)">🚨 Ocorrências de Vulto</button>
+                <button class="menu-btn" onclick="abrirTela('tela-guinchos', this)">🚛 Guinchos e Pátio</button>
+                <button class="menu-btn" onclick="abrirTela('tela-efetivo', this)">📘 Gestão de Efetivo</button>
+                
+                <button class="menu-btn only-admin" style="color:#d69e2e;" onclick="abrirTela('tela-usuarios', this)">🛡️ Gestão de Perfis</button>
+                <button class="menu-btn only-admin" style="color:#d69e2e;" onclick="abrirTela('tela-auditoria', this)">📜 Histórico de Ações</button>
+            </div>
+            <div class="sidebar-footer">
+                <button class="btn-global btn-backup only-admin" onclick="gerarBackupGeral()">💾 Baixar Backup Único</button>
+                <button class="btn-global btn-logout" onclick="fazerLogout()">🚪 Sair do Sistema</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            
+            <div id="tela-dashboard" class="screen active">
+                <div id="banner-pendente" style="display:none; background-color: #fefcbf; color: #975a16; border-left: 4px solid #d69e2e; padding: 15px; border-radius: 4px; margin-bottom: 20px; font-size: 14px;">
+                    <strong>⚠️ Atenção:</strong> O seu perfil encontra-se na Fila de Espera. O seu acesso está temporariamente limitado apenas ao modo visualização deste painel, até que um Administrador aprove a sua conta.
+                </div>
+
+                <h2>Visão Geral da Operação <span style="font-size: 12px; color: #38a169; background: #f0fdf4; padding: 4px 10px; border-radius: 12px;">🟢 Online</span></h2>
+                
+                <div class="dashboard-grid">
+                    <div class="card"><div class="card-icon">👮</div><div class="card-info"><h3 id="dashEfetivo">0</h3><p>Efetivo Total Cadastrado</p></div></div>
+                    <div class="card" style="border-left: 4px solid #e53e3e;"><div class="card-icon">🚨</div><div class="card-info"><h3 id="dashOcorrencias">0</h3><p>Suas Ocorrências (Hoje/Ontem)</p></div></div>
+                    <div class="card" style="border-left: 4px solid #d69e2e;"><div class="card-icon">🚛</div><div class="card-info"><h3 id="dashGuinchos">0</h3><p>Seus Guinchos (Hoje/Ontem)</p></div></div>
+                </div>
+
+                <div id="box-relatorio-dashboard" style="text-align: center; background: #fff; padding: 30px; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 4px 10px rgba(0,0,0,0.05);" class="no-print">
+                    <h3 style="margin-top: 0; color: #2d3748; font-size: 22px;">Resumo Diário de Serviço (Dossiê)</h3>
+                    <p style="color: #718096; font-size: 14px; margin-bottom: 20px;">Gera o relatório com o Mapa de Força, Guinchos, SIOPM e Ocorrências.<br>
+                    <strong style="color: #c53030;">Dica:</strong> Insira um asterisco (*) no Talão da Ocorrência para detalhar o Histórico no relatório.</p>
+                    
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 5px; display: inline-block; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                        <label style="font-weight: bold; color: #2b6cb0; font-size: 14px; margin-right: 10px;">Data do Plantão:</label>
+                        <input type="date" id="dataRelatorioDashboard" style="padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-weight: bold; color: #2d3748; outline: none; width: auto;" class="mono-font">
+                    </div>
+                    <br>
+                    <button class="btn btn-save" style="padding: 15px 40px; font-size: 18px; width: auto; background-color: #2b6cb0;" onclick="imprimirRelatorioGeral()">🖨️ Imprimir Relatório Completo do Turno</button>
+                </div>
+            </div>
+
+            <div id="tela-siopm" class="screen">
+                <h2>
+                    <span>Controlo de Talões (SIOPM Inoperante)</span>
+                    <div class="no-print"><button class="btn btn-print" onclick="imprimirTela('siopm')">🖨️ Imprimir PDF</button></div>
+                </h2>
+                <div class="form-section no-print hide-leitura">
+                    <input type="hidden" id="sId">
+                    <div class="form-grid">
+                        <div><label>Batalhão</label><select id="sBpm"></select></div>
+                        <div><label>Nº Talão</label><input type="text" id="sTalao" placeholder="Ex: 12345" class="mono-font"></div>
+                        <div><label>Período</label><select id="sPeriodo"><option value="Dia">Dia</option><option value="Noite">Noite</option></select></div>
+                        <div>
+                            <button class="btn btn-save" id="btnSalvarSiopm" onclick="salvarSiopm()">➕ Gerar Talão</button>
+                            <button class="btn btn-restore" id="btnCancelarSiopm" onclick="cancelarEdicaoSiopm()" style="display:none; margin-top: 5px; width: 100%; padding: 8px;">Cancelar Edição</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="filtros-siopm no-print" style="background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
+                    <strong style="color: #4a5568;">🔍 Filtros:</strong>
+                    <select id="filtroSiopmBpm" onchange="listarSiopm()" style="width: 150px; padding: 8px; border-radius: 5px; border: 1px solid #cbd5e1;"></select>
+                    <select id="filtroSiopmStatus" onchange="listarSiopm()" style="width: 150px; padding: 8px; border-radius: 5px; border: 1px solid #cbd5e1;">
+                        <option value="todos">Todos os Status</option><option value="Aberto">Abertos</option><option value="Encerrado">Encerrados</option>
+                    </select>
+                </div>
+                <table>
+                    <thead><tr><th style="width: 100px;">Data</th><th style="width: 120px;">Batalhão</th><th style="width: 100px;">Nº Talão</th><th style="width: 80px;">Período</th><th>Status</th><th>Desfecho</th><th class="no-print" style="width: 150px;">Ações</th></tr></thead>
+                    <tbody id="tabelaSiopm"></tbody>
+                </table>
+            </div>
+
+            <div id="tela-efetivo" class="screen">
+                <h2>
+                    <span>Base Única de Policiais (Contatos)</span>
+                    <span id="contadorEfetivo" style="font-size: 13px; color: #4a5568; background: #e2e8f0; padding: 5px 15px; border-radius: 20px; font-weight: bold;">0 cadastrados</span>
+                </h2>
+                <div class="no-print" style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; border-left: 5px solid #3182ce; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                    <label style="font-size: 14px; font-weight: bold; color: #2d3748; margin-bottom: 10px; display: block;">Pesquisar na Base de Dados</label>
+                    <input type="text" id="buscaEfetivo" placeholder="🔍 Digite o Nome, Posto ou Unidade do policial para buscar..." onkeyup="listarEfetivo()" style="width: 100%; max-width: none; padding: 15px; border-radius: 30px; border: 2px solid #e2e8f0; font-size: 15px; background: #f8fafc;">
+                </div>
+                <details id="detailsEfetivo" class="no-print hide-leitura" style="margin-bottom: 25px; background: #f8fafc; padding: 15px 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <summary style="font-weight: bold; cursor: pointer; color: #2b6cb0; font-size: 14px; outline: none;">➕ Cadastrar ou Editar Policial</summary>
+                    <div class="form-grid" style="margin-top: 15px;">
+                        <input type="hidden" id="eId">
+                        <div style="grid-column: span 2;"><label>Posto / Grad. e Nome</label><input type="text" id="eNome" placeholder="Ex: 1º SGT PM SILVA"></div>
+                        <div>
+                            <label>Unidade / BPM</label>
+                            <select id="eUnidade" onchange="verificarUnidadeOutros()"></select>
+                            <input type="text" id="eUnidadeOutro" placeholder="Qual unidade?" style="display:none; margin-top:5px; border-color:#2b6cb0;">
+                        </div>
+                        <div><label>Telefone</label><input type="text" id="eTel" placeholder="Ex: 11988887777" class="mono-font"></div>
+                        <div style="grid-column: span 2; display: flex; gap: 10px;">
+                            <button class="btn btn-save" id="btnSalvarEfetivo" onclick="salvarEfetivo()">💾 Salvar na Base</button>
+                            <button class="btn btn-restore" id="btnCancelarEfetivo" onclick="cancelarEdicaoEfetivo()" style="display:none;">Cancelar Edição</button>
+                        </div>
+                    </div>
+                </details>
+                <table>
+                    <thead><tr><th>Nome / Posto</th><th style="width: 250px;">Unidade</th><th style="width: 180px;">Telefone</th><th class="no-print" style="width: 100px;">Ações</th></tr></thead>
+                    <tbody id="tabelaEfetivo"><tr><td colspan='4' style='text-align:center; color:#718096; padding: 20px;'>Aguardando pesquisa. Utilize a barra de busca acima.</td></tr></tbody>
+                </table>
+            </div>
+
+            <div id="tela-mapa" class="screen">
+                <h2>
+                    <span>Mapa de Força Operacional (Individual)</span>
+                    <div class="no-print" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <button class="btn" style="background: #edf2f7; color: #2b6cb0; border: 1px solid #cbd5e1; padding: 8px 15px; font-size: 13px;" onclick="setMapaDataRapida(0)">Hoje</button>
+                        <button class="btn" style="background: #edf2f7; color: #4a5568; border: 1px solid #cbd5e1; padding: 8px 15px; font-size: 13px;" onclick="setMapaDataRapida(1)">Ontem</button>
+                        <input type="date" id="dataMapa" onchange="carregarMapaDoDia()" style="width:auto; padding: 7px; font-weight: bold; background: #fff; border: 1px solid #cbd5e1; border-radius: 5px; color: #2d3748;" class="mono-font">
+                        
+                        <select id="filtroAdminUsuarioMapa" class="only-admin" style="padding: 7px; background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 5px; font-weight: bold; font-size: 12px; margin-left: 10px;" onchange="carregarMapaDoDia()">
+                            <option value="todos">👑 Admin: Todos os Perfis</option>
+                        </select>
+
+                        <button class="btn btn-print" style="margin-left: 10px;" onclick="imprimirTela('mapa')">🖨️ Imprimir PDF</button>
+                    </div>
+                </h2>
+                
+                <div class="form-section no-print hide-leitura" id="formMapaArea" style="transition: 0.3s;">
+                    <div id="avisoEdicaoMapa" style="display:none; color:#d69e2e; font-weight:bold; font-size:14px; margin-bottom:15px; border-bottom:1px dashed #d69e2e; padding-bottom:5px;">⚠️ MODO DE EDIÇÃO - Atualizando dados do militar</div>
+                    <input type="hidden" id="mId">
+                    <div class="form-grid">
+                        <div><label>Função</label><select id="mFuncao"><option>SUP SOBREAVISO</option><option>SUP REGIONAL</option><option>PPJMD</option><option>CFP</option><option>CGP</option></select></div>
+                        <div><label>Militar (Digite para buscar)</label><input type="text" id="mNome" list="listaEfetivoMapa" oninput="autoPreencherMapa(this.value)"><datalist id="listaEfetivoMapa"></datalist></div>
+                        <div><label>BPM</label><input type="text" id="mUnidade" readonly style="background:#edf2f7;"></div>
+                        <div><label>Cia</label><select id="mCia"><option>-</option><option>1ª CIA</option><option>2ª CIA</option><option>3ª CIA</option><option>4ª CIA</option><option>5ª CIA</option></select></div>
+                        <div style="display: flex; gap: 5px; align-items: end;">
+                            <button class="btn btn-save" id="btnSalvarMapa" onclick="adicionarEscalaMapa()" style="padding: 10px;">➕ Lançar</button>
+                            <button class="btn btn-restore" id="btnCancelarMapa" onclick="cancelarEdicaoMapa()" style="display:none; padding: 10px;">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="containerSupervisao" class="grid-supervisao"></div>
+                <div id="containerBatalhoes"></div>
+            </div>
+
+            <div id="tela-ocorrencias" class="screen">
+                <h2>
+                    <span>Ocorrências de Vulto</span>
+                    <div class="no-print">
+                        <button class="btn btn-print only-admin" onclick="imprimirTela('ocorrencias')">🖨️ Imprimir Tudo</button>
+                    </div>
+                </h2>
+                
+                <p style="color: #718096; font-size: 13px; margin-top: -5px;">A tabela exibe por defeito as ocorrências recentes. Para procurar antigas, digite na pesquisa.</p>
+                
+                <div class="form-section no-print hide-leitura">
+                    <input type="hidden" id="oId">
+                    <div class="form-grid">
+                        <div><label>Batalhão</label><select id="oBpm" onchange="verificarBpmOcorrenciaOutros()"></select><input type="text" id="oBpmOutro" placeholder="Qual batalhão?" style="display:none; margin-top:5px; border-color:#2b6cb0;"></div>
+                        <div><label>Talão</label><input type="text" id="oTalao" placeholder="Ex: 4589 ou 4589*" class="mono-font"></div>
+                        <div style="grid-column: span 2;"><label>Histórico da Ocorrência</label><textarea id="oHistorico" rows="3" placeholder="Detalhes (Obrigatório se usar * no talão)"></textarea></div>
+                        <div style="grid-column: span 2; display: flex; gap: 10px; align-items: end;">
+                            <button class="btn btn-save" onclick="salvarOcorrencia()" style="width: auto; padding: 10px 20px;">💾 Registrar Ocorrência</button>
+                            <button class="btn btn-restore" id="btnCancelarOcorrencia" onclick="cancelarEdicaoOcorrencia()" style="display:none; padding: 10px 15px;">Cancelar Edição</button>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="text" id="buscaOcorrencia" placeholder="🔍 Pesquisar ocorrências..." onkeyup="listarOcorrencias()" style="margin-bottom: 10px; width: 100%; max-width: 500px; padding: 12px; border-radius: 20px; border: 2px solid #3182ce;">
+
+                <table>
+                    <thead><tr><th style="width:100px;">Data</th><th style="width:120px;">BPM</th><th style="width:120px;">Talão</th><th>Histórico</th><th class="no-print" style="width:160px;">Ações</th></tr></thead>
+                    <tbody id="tabelaOcorrencias"></tbody>
+                </table>
+            </div>
+
+            <div id="tela-guinchos" class="screen">
+                <h2>
+                    <span>Controle de Acionamentos (Guincho)</span>
+                    <div class="no-print">
+                        <button class="btn btn-print" onclick="imprimirTela('guinchos')">🖨️ Imprimir / Salvar</button>
+                    </div>
+                </h2>
+                
+                <details class="no-print hide-leitura" style="margin-bottom: 20px; background: #fff; padding: 15px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                    <summary style="font-weight: bold; cursor: pointer; color: #2b6cb0;">➕ Cadastrar Novo Motorista de Guincho</summary>
+                    <div class="form-grid" style="margin-top: 15px;">
+                        <div><label>Nome do Motorista</label><input type="text" id="cadMotNome" placeholder="Ex: João da Silva"></div>
+                        <div><label>CPF</label><input type="text" id="cadMotCpf" placeholder="Ex: 000.000.000-00" class="mono-font"></div>
+                        <div><button class="btn btn-save" onclick="salvarNovoMotorista()">💾 Salvar Motorista</button></div>
+                    </div>
+                </details>
+
+                <div class="form-section no-print hide-leitura">
+                    <div class="form-grid">
+                        <div><label>Motorista (Digite p/ buscar)</label><input type="text" id="gMotorista" list="listaMotoristasGuincho" placeholder="Nome..."><datalist id="listaMotoristasGuincho"></datalist></div>
+                        <div><label>Placa Guincho</label><input type="text" id="gPlaca" class="mono-font" style="text-transform: uppercase;"></div>
+                        <div><label>BPM Solicitante</label><select id="gBpm"></select></div>
+                        <div><label>Talão</label><input type="text" id="gTalao" class="mono-font"></div>
+                        <div><label>Pátio Destino</label><input type="text" id="gPatio"></div>
+                        <div><button class="btn btn-save" onclick="salvarGuincho()">Registrar Acionamento</button></div>
+                    </div>
+                </div>
+
+                <input type="text" id="buscaGuincho" placeholder="🔍 Pesquisar guinchos..." onkeyup="listarGuinchos()" style="margin-bottom: 10px; width: 100%; max-width: 500px; padding: 12px; border-radius: 20px; border: 2px solid #3182ce;">
+
+                <table>
+                    <thead><tr><th style="width:130px;">Data / Hora</th><th>Motorista / CPF</th><th style="width:100px;">Placa</th><th style="width:120px;">BPM</th><th style="width:100px;">Talão</th><th>Pátio</th><th class="no-print" style="width:100px;">Status</th><th class="no-print" style="width:60px;">Ação</th></tr></thead>
+                    <tbody id="tabelaGuinchos"></tbody>
+                </table>
+            </div>
+
+            <div id="tela-usuarios" class="screen only-admin">
+                <h2><span>🛡️ Gestão de Perfis (Acesso Restrito)</span></h2>
+                <table style="max-width: 1000px;">
+                    <thead><tr><th>E-mail do Utilizador</th><th style="width: 120px; text-align:center;">Estado</th><th style="width: 150px; text-align:center;">Cargo</th><th class="no-print" style="width: 250px; text-align:center;">Ações de Segurança</th></tr></thead>
+                    <tbody id="tabelaUsuarios"></tbody>
+                </table>
+            </div>
+
+            <div id="tela-auditoria" class="screen only-admin">
+                <h2><span>📜 Histórico de Ações (Auditoria)</span></h2>
+                <input type="text" id="buscaAuditoria" placeholder="🔍 Pesquisar no histórico..." onkeyup="listarAuditoria()" style="margin-bottom: 15px; width: 100%; max-width: 500px; padding: 12px; border-radius: 20px; border: 2px solid #d69e2e;">
+                <table style="font-size: 12px;">
+                    <thead><tr><th style="width: 150px;">Data/Hora</th><th style="width: 200px;">Utilizador (E-mail)</th><th style="width: 180px;">Ação</th><th>Detalhe do Registo</th></tr></thead>
+                    <tbody id="tabelaAuditoria"></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // ==========================================================
+        // ⚠️ COLOQUE AS SUAS CHAVES DO NOVO FIREBASE AQUI
+        // ==========================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyA8x03EfniEJuUiPgy2OsKU5z-5t-MgpGc",
+            authDomain: "controlefuncional-9ea1f.firebaseapp.com",
+            projectId: "controlefuncional-9ea1f",
+            storageBucket: "controlefuncional-9ea1f.firebasestorage.app",
+            messagingSenderId: "542560536368",
+            appId: "1:542560536368:web:dee033089e03339148aaf5",
+            measurementId: "G-F1WYED7H31"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const dbFS = getFirestore(app);
+
+        // O novo objeto central mantido atualizado em tempo real pelo Firebase
+        window.sgidb = { efetivo: [], mapaForca: [], ocorrencias: [], guinchos: [], motoristas: [], siopm: [], perfis: {}, auditoria: [] };
+        
+        window.currentUserEmail = "";
+        window.isAdmin = false;
+        window.userRole = "leitura";
+        window.userStatus = "pendente";
+        
+        let inatividadeTimer;
+        const TEMPO_INATIVIDADE = 15 * 60 * 1000;
+        const EMAIL_DO_ADMINISTRADOR = "lucaszulu@gmail.com"; 
+
+        // CONTROLO ONLINE
+        window.setOnlineStatus = async function(isOnline) {
+            if(window.currentUserEmail) {
+                try { await setDoc(doc(dbFS, "perfis", window.currentUserEmail), { isOnline: isOnline, lastSeen: window.getDataHoje() + ' ' + new Date().toLocaleTimeString() }, { merge: true }); } catch(e) {}
+            }
+        }
+
+        function resetarTimer() { clearTimeout(inatividadeTimer); if(window.currentUserEmail) inatividadeTimer = setTimeout(mostrarAvisoInatividade, TEMPO_INATIVIDADE); }
+        async function mostrarAvisoInatividade() { document.getElementById('modal-inatividade').style.display = 'flex'; await window.setOnlineStatus(false); signOut(auth); }
+
+        window.onload = function() { window.inicializarCamposDinamicos(); document.getElementById('dataMapa').value = new Date().toISOString().split('T')[0]; document.getElementById('dataRelatorioDashboard').value = new Date().toISOString().split('T')[0]; window.onload = resetarTimer; document.onmousemove = resetarTimer; document.onkeypress = resetarTimer; document.onclick = resetarTimer; document.onscroll = resetarTimer; };
+
+        // AUTENTICAÇÃO
+        window.fazerLogin = async function() { try { await signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginSenha').value); } catch(e) { document.getElementById('msgErroLogin').style.display = 'block'; } };
+        const provider = new GoogleAuthProvider();
+        window.fazerLoginGoogle = async function() { try { await signInWithPopup(auth, provider); } catch(e) { document.getElementById('msgErroLogin').style.display = 'block'; } };
+        window.fazerLogout = async function() { await window.setOnlineStatus(false); await signOut(auth); location.reload(); };
+
+        // AUDITORIA INDIVIDUAL
+        window.registrarAuditoria = async function(acao, detalhe) {
+            let ts = Date.now();
+            await setDoc(doc(dbFS, "auditoria", "log_" + ts), {
+                data: new Date().toLocaleString('pt-BR'), user: window.currentUserEmail, acao: acao, detalhe: detalhe, ts: ts
+            });
+        }
+
+onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                window.currentUserEmail = user.email;
+                window.isAdmin = (user.email === EMAIL_DO_ADMINISTRADOR);
+                
+                // VERIFICA SE O PERFIL JÁ EXISTE NO BANCO ANTES DE ATUALIZAR
+                const userRef = doc(dbFS, "perfis", user.email);
+                const docSnap = await getDoc(userRef);
+
+                // Força o admin a existir na base
+                if(window.isAdmin) {
+                    await setDoc(userRef, { status: 'aprovado', role: 'admin' }, { merge: true });
+                } else {
+                    // SÓ cria como pendente se for a PRIMEIRA vez que o utilizador entra
+                    if (!docSnap.exists()) {
+                        await setDoc(userRef, { status: 'pendente', role: 'leitura' }, { merge: true });
+                    }
+                }
+
+                document.body.className = '';
+                if(window.isAdmin) { document.body.classList.add('role-admin'); document.getElementById('tagAdmin').style.display = 'inline-block'; }
+                
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-container').style.display = 'flex';
+                
+                window.registrarAuditoria('Login', 'Entrou no sistema.');
+                resetarTimer();
+                iniciarSincronizacaoFirebase();
+                setTimeout(() => window.setOnlineStatus(true), 2000);
+            } else {
+                document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-container').style.display = 'none'; clearTimeout(inatividadeTimer);
+            }
+        });
+
+        // O NOVO MOTOR DE SINCRONIZAÇÃO INDIVIDUAL
+        function iniciarSincronizacaoFirebase() {
+            const colecoesBasicas = ['efetivo', 'ocorrencias', 'guinchos', 'motoristas', 'mapaForca', 'siopm'];
+            
+            colecoesBasicas.forEach(colName => {
+                onSnapshot(collection(dbFS, colName), (snapshot) => {
+                    window.sgidb[colName] = [];
+                    snapshot.forEach(d => window.sgidb[colName].push(d.data()));
+                    window.atualizarTudo();
+                });
+            });
+
+            onSnapshot(collection(dbFS, "perfis"), (snapshot) => {
+                window.sgidb.perfis = {};
+                snapshot.forEach(d => { window.sgidb.perfis[d.id] = d.data(); });
+                verificarSeguranca();
+                window.atualizarTudo();
+            });
+
+            onSnapshot(collection(dbFS, "auditoria"), (snapshot) => {
+                let aud = [];
+                snapshot.forEach(d => aud.push(d.data()));
+                window.sgidb.auditoria = aud.sort((a,b) => b.ts - a.ts).slice(0, 500); 
+                if(document.getElementById('tela-auditoria').classList.contains('active')) window.listarAuditoria();
+            });
+        }
+
+        function verificarSeguranca() {
+            if(!window.currentUserEmail || window.isAdmin) return;
+            let meuPerfil = window.sgidb.perfis[window.currentUserEmail];
+            if(!meuPerfil || meuPerfil.status === 'bloqueado') { alert("Acesso Revogado."); window.fazerLogout(); return; }
+            
+            window.userStatus = meuPerfil.status;
+            window.userRole = meuPerfil.role;
+            
+            if(window.userRole === 'leitura') document.body.classList.add('role-leitura'); else document.body.classList.remove('role-leitura');
+            if(window.userStatus === 'pendente') { document.body.classList.add('status-pendente'); document.getElementById('banner-pendente').style.display = 'block'; }
+            else { document.body.classList.remove('status-pendente'); document.getElementById('banner-pendente').style.display = 'none'; }
+        }
+
+        window.getDB = function() { return window.sgidb; }
+
+        // CAMPOS DINAMICOS
+        window.inicializarCamposDinamicos = function() {
+            let bpmOptions = `<option value="">Selecione...</option>`; let fBpm = `<option value="todos">Todos</option>`;
+            for(let i=1; i<=50; i++) { bpmOptions += `<option value="${i}º BPM">${i}º BPM</option>`; fBpm += `<option value="${i}º BPM">${i}º BPM</option>`; }
+            bpmOptions += `<option value="OUTROS">OUTROS...</option>`;
+            document.getElementById('gBpm').innerHTML = bpmOptions; document.getElementById('eUnidade').innerHTML = bpmOptions; document.getElementById('oBpm').innerHTML = bpmOptions; document.getElementById('sBpm').innerHTML = bpmOptions; document.getElementById('filtroSiopmBpm').innerHTML = fBpm;
+        }
+
+        window.verificarUnidadeOutros = function() { const v = document.getElementById('eUnidade').value; document.getElementById('eUnidadeOutro').style.display = (v === 'OUTROS') ? 'block' : 'none'; }
+        window.verificarBpmOcorrenciaOutros = function() { const v = document.getElementById('oBpm').value; document.getElementById('oBpmOutro').style.display = (v === 'OUTROS') ? 'block' : 'none'; }
+        window.setMapaDataRapida = function(d) { const dt = new Date(); dt.setDate(dt.getDate() - d); document.getElementById('dataMapa').value = dt.toISOString().split('T')[0]; window.carregarMapaDoDia(); }
+        window.formatarDataBR = function(d) { return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); }
+        window.getDataHoje = function() { return window.formatarDataBR(new Date()); }
+        window.formatarTelefoneParaSalvar = function(t) { if (!t) return ''; let n = t.replace(/\D/g, ''); if (n.length > 11) n = n.slice(-11); if (n.length === 11) return n.replace(/(\d{2})(\d{5})(\d{4})/, '$1-$2-$3'); else if (n.length === 10) return n.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3'); return t; }
+        window.imprimirTela = function(t) { const o = document.title; const d = window.getDataHoje().replace(/\//g,'-'); document.title = `${t.toUpperCase()} ${d}`; window.print(); setTimeout(() => { document.title = o; }, 1000); }
+
+        window.imprimirRelatorioGeral = function() {
+            let db = window.getDB(); const dStr = document.getElementById('dataRelatorioDashboard').value; if(!dStr) return alert("Selecione a data!");
+            const [a, m, d] = dStr.split('-'); const hj = new Date(a, m - 1, d); const on = new Date(a, m - 1, d); on.setDate(hj.getDate() - 1);
+            const sHj = window.formatarDataBR(hj); const sOn = window.formatarDataBR(on); const hjIso = dStr; const onIso = on.getFullYear() + '-' + String(on.getMonth() + 1).padStart(2, '0') + '-' + String(on.getDate()).padStart(2, '0');
+            const dTs = [sHj, sOn, `${hj.getDate()}/${hj.getMonth()+1}/${hj.getFullYear()}`, `${on.getDate()}/${on.getMonth()+1}/${on.getFullYear()}`];
+
+            let mOn = db.mapaForca.filter(x => x.data === onIso); let mHj = db.mapaForca.filter(x => x.data === hjIso);
+            let guinchosTurno = db.guinchos.filter(g => { if(!g.dataShow) return false; const dataG = g.dataShow.split(' ')[0]; return dTs.includes(dataG); });
+            let oco = db.ocorrencias.filter(x => dTs.includes(x.data)); 
+            let sio = db.siopm.filter(x => dTs.includes(x.data));
+
+            if(!window.isAdmin) {
+                mOn = mOn.filter(x => x.criadoPor === window.currentUserEmail);
+                mHj = mHj.filter(x => x.criadoPor === window.currentUserEmail);
+                guinchosTurno = guinchosTurno.filter(g => g.criadoPor === window.currentUserEmail);
+                oco = oco.filter(x => x.criadoPor === window.currentUserEmail);
+            }
+
+            window.registrarAuditoria('Impressão de Relatório', `Gerou o Dossiê para as datas ${sOn} e ${sHj}`);
+
+            let h1Titulo = window.isAdmin ? "Relatório de Ocorrências de Vulto" : "Relatório Geral Diário";
+
+            let html = `<div style="font-family:sans-serif; color:#2d3748; padding:10px;"><div class="print-header"><div><h1 style="margin:0; font-size:24px;">${h1Titulo}</h1><h2 style="margin:5px 0 0 0; color:#718096; font-size:14px;">COPOM Supervisores</h2></div><div style="text-align:right;"><p style="font-size:14px; font-weight:bold; background:#edf2f7; padding:8px;">Período: ${sOn} e ${sHj}</p></div></div>`;
+            
+            if (!window.isAdmin) {
+                html += `<div style="margin-bottom:30px;"><h3 class="print-section-title print-title-mapa">1. EFETIVO ESCALADO</h3>`;
+                if (mOn.length===0 && mHj.length===0) html += `<p>Nenhum militar escalado.</p>`;
+                else {
+                    [{ n: "ONTEM", d: sOn, list: mOn }, { n: "HOJE", d: sHj, list: mHj }].forEach(t => {
+                        if (t.list.length > 0) {
+                            html += `<div style="border:2px solid #2b6cb0; border-radius:4px; padding:10px; margin-bottom:20px;"><h4 style="margin:0 0 10px 0; color:#2b6cb0; text-align:center;">TURNO DE ${t.n} (${t.d})</h4>`;
+                            let sup = t.list.filter(r => r.funcao.includes("SUP") || r.funcao === "PPJMD"); let op = t.list.filter(r => r.funcao === "CFP" || r.funcao === "CGP");
+                            if(sup.length>0) { html += `<div class="print-bpm-header">👑 SUPERVISÃO</div><table class="print-table"><thead><tr><th style="width:20%">Função</th><th style="width:45%">Nome</th><th style="width:20%">Unidade</th><th style="width:15%">Telefone</th></tr></thead><tbody>`; sup.forEach(m => html += `<tr><td><strong>${m.funcao}</strong></td><td>${m.nome}</td><td>${m.unidade}</td><td>${m.tel||'-'}</td></tr>`); html += `</tbody></table>`; }
+                            if(op.length>0) {
+                                [...new Set(op.map(r => r.unidade))].sort().forEach(u => {
+                                    html += `<div class="print-bpm-header">🚓 ${u}</div><table class="print-table"><thead><tr><th style="width:15%">Função</th><th style="width:50%">Nome</th><th style="width:15%">Cia</th><th style="width:20%">Telefone</th></tr></thead><tbody>`;
+                                    op.filter(r => r.unidade === u).sort((a,b)=>{if(a.funcao==="CFP"&&b.funcao!=="CFP")return -1;if(b.funcao==="CFP"&&a.funcao!=="CFP")return 1;return a.cia.localeCompare(b.cia);}).forEach(m => { html += `<tr ${m.funcao==='CFP'?'class="print-row-cfp"':''}><td ${m.funcao==='CFP'?'style="color:#c53030;font-weight:bold"':''}>${m.funcao}</td><td ${m.funcao==='CFP'?'style="color:#c53030;font-weight:bold"':''}>${m.nome}</td><td>${m.cia}</td><td>${m.tel||'-'}</td></tr>`; });
+                                    html += `</tbody></table>`;
+                                });
+                            } html += `</div>`;
+                        }
+                    });
+                } html += `</div>`;
+            }
+
+            let numOco = window.isAdmin ? "1" : "2";
+            html += `<div style="margin-bottom:30px;"><h3 class="print-section-title print-title-oco">${numOco}. OCORRÊNCIAS DE VULTO</h3>`;
+            if (oco.length===0) html += `<p>Nenhuma ocorrência neste período.</p>`; else {
+                html += `<table class="print-table"><thead><tr><th style="width:20%">Data</th><th style="width:30%">BPM</th><th style="width:50%">Nº Talão</th></tr></thead><tbody>`;
+                oco.forEach(o => html += `<tr><td>${o.data}</td><td><strong>${o.bpm}</strong></td><td>${o.talao}</td></tr>`); html += `</tbody></table>`;
+                let dO = oco.filter(o => o.talao && o.talao.includes('*'));
+                if(dO.length>0) { html += `<h4 style="color:#c53030; border-bottom:2px solid #feb2b2;">📋 DETALHAMENTO (*)</h4>`; dO.forEach(o => html += `<div class="print-oco-card"><p><strong>Data:</strong> ${o.data} | <strong>BPM:</strong> ${o.bpm} | <strong>Talão:</strong> ${o.talao}</p><p style="white-space:pre-wrap;">${o.historico}</p></div>`); }
+            } html += `</div>`;
+
+            if (!window.isAdmin) {
+                html += `<div style="margin-bottom:30px;"><h3 class="print-section-title print-title-guincho">3. GUINCHOS ACIONADOS</h3>`;
+                if (guinchosTurno.length===0) html += `<p>Nenhum guincho registado.</p>`; else { html += `<table class="print-table"><thead><tr><th>Data/Hora</th><th>Motorista</th><th>Placa</th><th>BPM</th><th>Talão</th><th>Pátio</th><th>Status</th></tr></thead><tbody>`; guinchosTurno.forEach(g => html += `<tr><td>${g.dataShow}</td><td><strong>${g.motNome}</strong></td><td>${g.placa}</td><td>${g.bpm}</td><td>${g.talao}</td><td>${g.patio}</td><td><strong>${g.chegou?"✅ Chegou":"🕒 Pendente"}</strong></td></tr>`); html += `</tbody></table>`; } html += `</div>`;
+
+                html += `<div style="margin-bottom:30px;"><h3 class="print-section-title print-title-siopm">4. SIOPM INOPERANTE</h3>`;
+                if (sio.length===0) html += `<p>Nenhum registo.</p>`; else { html += `<table class="print-table"><thead><tr><th>Data</th><th>BPM</th><th>Talão</th><th>Período</th><th>Status</th><th>Desfecho</th></tr></thead><tbody>`; sio.forEach(s => html += `<tr><td>${s.data}</td><td>${s.bpm}</td><td>${s.talao}</td><td>${s.periodo}</td><td><strong>${s.status}</strong></td><td>${s.desfecho||'-'}</td></tr>`); html += `</tbody></table>`; } html += `</div>`;
+            }
+
+            html += `</div>`;
+
+            document.getElementById('printRelatorioGeral').innerHTML = html;
+            const tituloPdf = window.isAdmin ? `RELATORIO OCORRENCIAS ${sHj.replace(/\//g,'-')}` : `RELATORIO GERAL ${sHj.replace(/\//g,'-')}`;
+            const tOrig = document.title; document.title = tituloPdf;
+            document.body.classList.add('printing-geral'); window.print(); document.body.classList.remove('printing-geral'); setTimeout(() => { document.title = tOrig; }, 1000);
+        }
+
+        window.atualizarDashboard = function() {
+            let db = window.getDB(); const dStr = document.getElementById('dataRelatorioDashboard').value; const [a, m, d] = dStr.split('-'); const hj = new Date(a, m - 1, d); const on = new Date(a, m - 1, d); on.setDate(hj.getDate() - 1);
+            const vs = [window.formatarDataBR(hj), window.formatarDataBR(on), `${hj.getDate()}/${hj.getMonth()+1}/${hj.getFullYear()}`, `${on.getDate()}/${on.getMonth()+1}/${on.getFullYear()}`];
+            
+            document.getElementById('dashEfetivo').innerText = db.efetivo.length; 
+            
+            let ocoDash = db.ocorrencias;
+            if(!window.isAdmin) ocoDash = ocoDash.filter(o => o.criadoPor === window.currentUserEmail);
+            document.getElementById('dashOcorrencias').innerText = ocoDash.filter(o => vs.includes(o.data)).length; 
+
+            let guinchosDash = db.guinchos;
+            if(!window.isAdmin) guinchosDash = guinchosDash.filter(g => g.criadoPor === window.currentUserEmail);
+            document.getElementById('dashGuinchos').innerText = guinchosDash.filter(g => g.dataShow && vs.includes(g.dataShow.split(' ')[0])).length;
+        }
+
+        window.atualizarFiltroAdminMapa = function() {
+            if(window.isAdmin) {
+                const sel = document.getElementById('filtroAdminUsuarioMapa');
+                sel.style.display = 'inline-block'; const atual = sel.value;
+                let html = `<option value="todos">👑 Admin: Todos os Perfis</option>`;
+                if(window.sgidb.perfis) { Object.keys(window.sgidb.perfis).forEach(email => html += `<option value="${email}">👤 Perfil: ${email}</option>`); }
+                sel.innerHTML = html; sel.value = atual || 'todos';
+            }
+        }
+
+        window.atualizarTudo = function() {
+            window.atualizarContadorEfetivo(); window.atualizarDatalistMapa(); window.atualizarFiltroAdminMapa();
+            if(document.getElementById('tela-mapa').classList.contains('active')) window.carregarMapaDoDia();
+            if(document.getElementById('tela-ocorrencias').classList.contains('active')) window.listarOcorrencias();
+            if(document.getElementById('tela-guinchos').classList.contains('active')) { window.carregarSelectMotoristas(); window.listarGuinchos(); }
+            if(document.getElementById('tela-siopm').classList.contains('active')) window.listarSiopm();
+            if(document.getElementById('tela-efetivo').classList.contains('active')) window.listarEfetivo();
+            if(document.getElementById('tela-usuarios').classList.contains('active')) window.listarUsuarios();
+            window.atualizarDashboard();
+        }
+
+        window.abrirTela = function(idTela, btn) { document.querySelectorAll('.screen').forEach(t => t.classList.remove('active')); document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active')); document.getElementById(idTela).classList.add('active'); btn.classList.add('active'); window.atualizarTudo(); }
+        window.atualizarContadorEfetivo = function() { document.getElementById('contadorEfetivo').innerText = `${window.getDB().efetivo.length} cadastrados`; }
+
+        // ==========================================
+        // NOVAS FUNÇÕES DE SALVAMENTO INDIVIDUAL
+        // ==========================================
+
+        window.salvarEfetivo = async function() {
+            const id = document.getElementById('eId').value || Date.now(); const nome = document.getElementById('eNome').value.trim();
+            let unid = document.getElementById('eUnidade').value; if(unid === 'OUTROS') unid = document.getElementById('eUnidadeOutro').value.trim().toUpperCase(); let tel = window.formatarTelefoneParaSalvar(document.getElementById('eTel').value);
+            if(!nome || !unid) return alert("Obrigatório!");
+            
+            let p = { id: Number(id), nome, unidade: unid, tel };
+            await setDoc(doc(dbFS, "efetivo", String(id)), p);
+            
+            window.registrarAuditoria(document.getElementById('eId').value ? 'Editou Policial' : 'Adicionou Policial', `Nome: ${nome}`);
+            window.cancelarEdicaoEfetivo();
+        }
+        
+        window.listarEfetivo = function() {
+            const t = document.getElementById('buscaEfetivo').value.toLowerCase().trim(); const tb = document.getElementById('tabelaEfetivo'); tb.innerHTML = "";
+            if(t.length === 0) { tb.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Aguardando pesquisa.</td></tr>"; return; }
+            let f = window.getDB().efetivo.filter(p => p.nome.toLowerCase().includes(t) || p.unidade.toLowerCase().includes(t));
+            if(f.length === 0) { tb.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Nenhum encontrado.</td></tr>"; return; }
+            f.forEach(p => tb.innerHTML += `<tr><td><strong>${p.nome}</strong></td><td>${p.unidade}</td><td class="mono-font">${p.tel||'-'}</td><td class="no-print"><button class="btn btn-edit hide-leitura" onclick="prepararEdicaoEfetivo(${p.id})">✏️</button> <button class="btn btn-del only-admin" onclick="excluirItem('efetivo', ${p.id})">🗑️</button></td></tr>`);
+        }
+        window.prepararEdicaoEfetivo = function(id) {
+            const p = window.getDB().efetivo.find(x => x.id === id); if(!p) return;
+            document.getElementById('detailsEfetivo').open = true; document.getElementById('eId').value = p.id; document.getElementById('eNome').value = p.nome; document.getElementById('eTel').value = p.tel || '';
+            const s = document.getElementById('eUnidade'); if(Array.from(s.options).some(o => o.value === p.unidade)) { s.value = p.unidade; document.getElementById('eUnidadeOutro').style.display = 'none'; } else { s.value = 'OUTROS'; document.getElementById('eUnidadeOutro').style.display = 'block'; document.getElementById('eUnidadeOutro').value = p.unidade; }
+            document.getElementById('btnSalvarEfetivo').innerText = "Atualizar Policial"; document.getElementById('btnCancelarEfetivo').style.display = "block";
+        }
+        window.cancelarEdicaoEfetivo = function() { document.getElementById('eId').value=""; document.getElementById('eNome').value=""; document.getElementById('eUnidade').value=""; document.getElementById('eUnidadeOutro').style.display="none"; document.getElementById('eTel').value=""; document.getElementById('btnSalvarEfetivo').innerText="💾 Salvar na Base"; document.getElementById('btnCancelarEfetivo').style.display="none"; document.getElementById('detailsEfetivo').open=false; }
+
+        // MAPA DE FORÇA
+        window.atualizarDatalistMapa = function() { const dl = document.getElementById('listaEfetivoMapa'); dl.innerHTML = ""; window.getDB().efetivo.forEach(p => dl.innerHTML += `<option value="${p.nome}">`); }
+        window.autoPreencherMapa = function(n) { let p = window.getDB().efetivo.find(x => x.nome.toLowerCase() === n.toLowerCase()); if(p) document.getElementById('mUnidade').value = p.unidade; }
+        
+        window.adicionarEscalaMapa = async function() {
+            let id = document.getElementById('mId').value || Date.now();
+            let f = document.getElementById('mFuncao').value; let n = document.getElementById('mNome').value; let u = document.getElementById('mUnidade').value; let c = document.getElementById('mCia').value; let d = document.getElementById('dataMapa').value;
+            if(!n) return alert("Por favor, digite o nome."); 
+            
+            let p = window.getDB().efetivo.find(x => x.nome.toLowerCase() === n.toLowerCase()); let tel = p ? p.tel : '';
+            
+            let obj = { id: Number(id), data: d, funcao: f, nome: n, unidade: u, cia: c, tel: tel };
+            if(!document.getElementById('mId').value) obj.criadoPor = window.currentUserEmail; // Mantem criador antigo se for edicao
+            else obj.criadoPor = window.getDB().mapaForca.find(x => x.id == id)?.criadoPor || window.currentUserEmail;
+
+            await setDoc(doc(dbFS, "mapaForca", String(id)), obj);
+            window.registrarAuditoria('Lançamento Mapa', `Militar: ${n}`);
+            window.cancelarEdicaoMapa();
+        }
+
+        window.prepararEdicaoMapa = function(id) {
+            let r = window.getDB().mapaForca.find(x => x.id === id); if(!r) return;
+            document.getElementById('mId').value = r.id; document.getElementById('mFuncao').value = r.funcao; document.getElementById('mNome').value = r.nome; document.getElementById('mUnidade').value = r.unidade; document.getElementById('mCia').value = r.cia; document.getElementById('dataMapa').value = r.data;
+            document.getElementById('btnSalvarMapa').innerText = "💾 Atualizar"; document.getElementById('btnCancelarMapa').style.display = "inline-block"; document.getElementById('avisoEdicaoMapa').style.display = "block"; window.scrollTo(0,0);
+        }
+        window.cancelarEdicaoMapa = function() { document.getElementById('mId').value = ""; document.getElementById('mNome').value = ""; document.getElementById('mUnidade').value = ""; document.getElementById('btnSalvarMapa').innerText = "➕ Lançar"; document.getElementById('btnCancelarMapa').style.display = "none"; document.getElementById('avisoEdicaoMapa').style.display = "none"; }
+
+        window.carregarMapaDoDia = function() {
+            const dt = document.getElementById('dataMapa').value; const contSup = document.getElementById('containerSupervisao'); const contBpm = document.getElementById('containerBatalhoes'); contSup.innerHTML = ""; contBpm.innerHTML = ""; 
+            let dia = window.getDB().mapaForca.filter(r => r.data === dt);
+            if (!window.isAdmin) dia = dia.filter(r => r.criadoPor === window.currentUserEmail);
+            else { const selUser = document.getElementById('filtroAdminUsuarioMapa').value; if(selUser !== 'todos') dia = dia.filter(r => r.criadoPor === selUser); }
+
+            let sup = dia.filter(r => r.funcao.includes("SUP") || r.funcao === "PPJMD"); let op = dia.filter(r => r.funcao === "CFP" || r.funcao === "CGP");
+            if(sup.length > 0) { 
+                contSup.innerHTML = `<h3 class="secao-titulo">👑 Supervisão do Turno</h3>`; 
+                sup.forEach(s => { 
+                    let bUser = window.isAdmin ? `<span style="font-size:9px; background:#edf2f7; color:#4a5568; padding:2px 4px; border-radius:4px; margin-top:4px; display:inline-block;">👤 ${s.criadoPor || 'Legado'}</span>` : '';
+                    let podeEditar = (window.isAdmin || s.criadoPor === window.currentUserEmail);
+                    let btnEdit = podeEditar ? `<button class="btn-edit no-print" onclick="prepararEdicaoMapa(${s.id})" style="margin-top:5px; margin-right:5px; display:inline-block; float:right; padding: 2px 5px;">✏️</button>` : '';
+                    let btnDel = podeEditar ? `<button class="btn-del no-print" onclick="excluirItem('mapaForca', ${s.id})" style="margin-top:5px; display:block; float:right;">🗑️</button>` : '';
+                    contSup.innerHTML += `<div class="card-sup"><div><span class="funcao">${s.funcao}</span><span class="nome">${s.nome}</span>${bUser}</div><div style="text-align:right"><span style="font-size:11px; display:block">${s.unidade}</span><span class="mono-font" style="font-size:12px; color:#edf2f7;">${s.tel||''}</span>${btnDel}${btnEdit}</div></div>`; 
+                }); 
+            }
+            if(op.length > 0) {
+                contBpm.innerHTML = `<h3 class="secao-titulo" style="margin-top: 20px;">🚓 Efetivo Operacional</h3>`;
+                [...new Set(op.map(r => r.unidade))].sort().forEach(unid => {
+                    let html = `<div class="bloco-bpm"><div class="header-bpm">${unid}</div>`;
+                    let mil = op.filter(r => r.unidade === unid).sort((a,b)=>{if(a.funcao==="CFP"&&b.funcao!=="CFP")return -1;if(b.funcao==="CFP"&&a.funcao!=="CFP")return 1;return a.cia.localeCompare(b.cia);});
+                    mil.forEach(m => { 
+                        let bUser = window.isAdmin ? `<div style="font-size:8px; color:#a0aec0; margin-top:2px;">👤 ${m.criadoPor || 'Legado'}</div>` : '';
+                        let podeEditar = (window.isAdmin || m.criadoPor === window.currentUserEmail);
+                        let btnEdit = podeEditar ? `<button class="btn-edit" onclick="prepararEdicaoMapa(${m.id})">✏️</button> ` : '';
+                        let btnDel = podeEditar ? `<button class="btn-del" onclick="excluirItem('mapaForca', ${m.id})">🗑️</button>` : '';
+                        html += `<div class="linha-militar ${m.funcao==='CFP'?'cfp':'cgp'}"><div class="info-funcao"><span class="badge ${m.funcao==='CFP'?'badge-cfp':'badge-cgp'}">${m.funcao}</span></div><div class="info-nome">${m.nome}${bUser}</div><div class="info-cia">${m.cia}</div><div class="info-tel mono-font">${m.tel||'-'}</div><div class="no-print" style="min-width: 60px;">${btnEdit}${btnDel}</div></div>`; 
+                    });
+                    contBpm.innerHTML += html + `</div>`;
+                });
+            }
+        }
+
+        // OCORRÊNCIAS
+        window.salvarOcorrencia = async function() { 
+            let id = document.getElementById('oId').value || Date.now();
+            let b=document.getElementById('oBpm').value; if(b==='OUTROS') b=document.getElementById('oBpmOutro').value.toUpperCase(); 
+            let t=document.getElementById('oTalao').value; let h=document.getElementById('oHistorico').value;
+            if(!b||!t) return alert("Batalhão e Talão são obrigatórios!"); 
+            
+            let obj = { id: Number(id), bpm:b, talao:t, historico:h };
+            if(!document.getElementById('oId').value) { obj.data = window.getDataHoje(); obj.criadoPor = window.currentUserEmail; }
+            else { let ant = window.getDB().ocorrencias.find(x => x.id == id); obj.data = ant.data; obj.criadoPor = ant.criadoPor; }
+
+            await setDoc(doc(dbFS, "ocorrencias", String(id)), obj);
+            window.registrarAuditoria('Registou Ocorrência', `Talão: ${t}`); 
+            window.cancelarEdicaoOcorrencia();
+        }
+
+        window.prepararEdicaoOcorrencia = function(id) {
+            let o = window.getDB().ocorrencias.find(x => x.id === id); if(!o) return;
+            document.getElementById('oId').value = o.id; const s = document.getElementById('oBpm');
+            if(Array.from(s.options).some(opt => opt.value === o.bpm)) { s.value = o.bpm; document.getElementById('oBpmOutro').style.display = 'none'; } else { s.value = 'OUTROS'; document.getElementById('oBpmOutro').style.display = 'block'; document.getElementById('oBpmOutro').value = o.bpm; }
+            document.getElementById('oTalao').value = o.talao; document.getElementById('oHistorico').value = o.historico;
+            document.querySelector('#tela-ocorrencias .btn-save').innerText = "💾 Atualizar Ocorrência"; document.getElementById('btnCancelarOcorrencia').style.display = "inline-block"; window.scrollTo(0,0);
+        }
+        window.cancelarEdicaoOcorrencia = function() { document.getElementById('oId').value = ""; document.getElementById('oBpm').value = ""; document.getElementById('oTalao').value = ""; document.getElementById('oHistorico').value = ""; document.querySelector('#tela-ocorrencias .btn-save').innerText = "💾 Registrar Ocorrência"; document.getElementById('btnCancelarOcorrencia').style.display = "none"; }
+
+        window.baixarOcorrenciaInd = function(id) {
+            let o = window.getDB().ocorrencias.find(x => x.id === id); if(!o) return;
+            const tOrig = document.title; document.title = `TALAO - ${o.talao} - ${o.data.replace(/\//g,'-')}`;
+            document.getElementById('printIndividual').innerHTML = `<div style="font-family: Arial, sans-serif; color: black; padding: 20px;"><h2 style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px;">REGISTRO DE OCORRÊNCIA DE VULTO</h2><div style="margin-top: 20px; font-size: 16px;"><p><strong>Data da Ocorrência:</strong> ${o.data}</p><p><strong>Batalhão Solicitante:</strong> ${o.bpm}</p><p><strong>Número do Talão:</strong> <span style="font-family: monospace;">${o.talao}</span></p><p style="color:#718096; font-size:12px;">Registado por: ${o.criadoPor || 'Legado/Sistema'}</p></div><h3 style="margin-top: 30px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Histórico</h3><p style="white-space: pre-wrap; line-height: 1.6; font-size: 14px; text-align: justify;">${o.historico}</p></div>`;
+            document.body.classList.add('printing-individual'); window.print(); document.body.classList.remove('printing-individual'); setTimeout(() => { document.title = tOrig; }, 1000);
+            window.registrarAuditoria('Imprimiu PDF de Ocorrência', `Imprimiu o talão ${o.talao}`);
+        }
+
+        window.listarOcorrencias = function() { 
+            const t=document.getElementById('buscaOcorrencia').value.toLowerCase().trim(); const tb=document.getElementById('tabelaOcorrencias'); tb.innerHTML=""; 
+            let f = [];
+            if(t.length === 0) { const hj = window.getDataHoje(); const on = new Date(); on.setDate(on.getDate()-1); const ontemStr = window.formatarDataBR(on); f = window.getDB().ocorrencias.filter(o => o.data === hj || o.data === ontemStr); } 
+            else { f = window.getDB().ocorrencias.filter(o=>o.data.includes(t)||o.bpm.toLowerCase().includes(t)||o.talao.toLowerCase().includes(t)||(o.historico&&o.historico.toLowerCase().includes(t))); }
+            
+            if(f.length===0){tb.innerHTML="<tr><td colspan='5' style='text-align:center;'>Nenhuma ocorrência encontrada.</td></tr>";return;} 
+            
+            f.sort((a,b) => b.id - a.id).forEach(o=>{
+                let podeEditar = (window.isAdmin || o.criadoPor === window.currentUserEmail);
+                let btnEdit = podeEditar ? `<button class="btn btn-edit no-print" onclick="prepararEdicaoOcorrencia(${o.id})">✏️</button>` : '';
+                let btnPdf = podeEditar ? `<button class="btn btn-save no-print" style="background-color:#3182ce; padding:6px 10px; margin-left:5px; font-size:11px; width:auto;" onclick="baixarOcorrenciaInd(${o.id})">🖨️ PDF</button>` : '';
+                let btnDel = podeEditar ? `<button class="btn btn-del" onclick="excluirItem('ocorrencias', ${o.id})">🗑️</button>` : '';
+                let bUser = window.isAdmin && o.criadoPor ? `<div style="font-size:9px; color:#a0aec0; margin-top:2px;">👤 ${o.criadoPor}</div>` : '';
+
+                tb.innerHTML+=`<tr><td class="mono-font">${o.data}</td><td><strong>${o.bpm}</strong></td><td class="mono-font">${o.talao}${bUser}</td><td style="font-size:12px;"><button class="btn btn-edit no-print" id="btn-hist-${o.id}" style="background-color:#718096; padding:6px 15px;" onclick="toggleHistorico(${o.id})">👁️ Exibir</button><div id="full-${o.id}" style="display:none; white-space:pre-wrap; background:#fffaf0; padding:10px; border-left:3px solid #d69e2e; margin-top:5px;">${o.historico}</div></td><td class="no-print" style="min-width: 100px;">${btnEdit} ${btnPdf} ${btnDel}</td></tr>`;
+            }); 
+        }
+        window.toggleHistorico = function(id) { let f=document.getElementById('full-'+id); let b=document.getElementById('btn-hist-'+id); if(f.style.display==='none'){f.style.display='block';b.innerHTML='🙈 Ocultar';}else{f.style.display='none';b.innerHTML='👁️ Exibir';} }
+
+        // GUINCHOS E MOTORISTAS
+        window.salvarNovoMotorista = async function() { let n=document.getElementById('cadMotNome').value.trim(); let c=document.getElementById('cadMotCpf').value.trim(); if(!n)return; let id = Date.now(); await setDoc(doc(dbFS, "motoristas", String(id)), {id:id, nome:n, cpf:c}); document.getElementById('cadMotNome').value=""; document.getElementById('cadMotCpf').value=""; alert("Cadastrado!"); }
+        window.carregarSelectMotoristas = function() { const dl = document.getElementById('listaMotoristasGuincho'); dl.innerHTML = ""; window.getDB().motoristas.slice().sort((a, b) => a.nome.localeCompare(b.nome)).forEach(m => dl.innerHTML += `<option value="${m.nome}">CPF: ${m.cpf || '-'}</option>`); }
+        
+        window.salvarGuincho = async function() { 
+            let n=document.getElementById('gMotorista').value.trim(); let b=document.getElementById('gBpm').value; if(!n||!b)return; 
+            let mot=window.getDB().motoristas.find(x=>x.nome.toLowerCase()===n.toLowerCase()); 
+            let id = Date.now();
+            await setDoc(doc(dbFS, "guinchos", String(id)), {
+                id: id, dataShow: window.getDataHoje() + ' ' + new Date().toLocaleTimeString().slice(0,5), 
+                motNome: mot ? mot.nome : n, motCpf: mot ? (mot.cpf || '') : '', 
+                placa: document.getElementById('gPlaca').value, bpm: b, talao: document.getElementById('gTalao').value, patio: document.getElementById('gPatio').value, 
+                chegou: false, criadoPor: window.currentUserEmail
+            }); 
+            window.registrarAuditoria('Solicitou Guincho', `Placa: ${document.getElementById('gPlaca').value}`);
+            document.getElementById('gMotorista').value=""; document.getElementById('gPlaca').value=""; document.getElementById('gTalao').value=""; document.getElementById('gBpm').value=""; 
+        }
+
+        window.listarGuinchos = function() { 
+            const t=document.getElementById('buscaGuincho').value.toLowerCase().trim(); const tb=document.getElementById('tabelaGuinchos'); tb.innerHTML=""; 
+            let guinchosGeral = window.getDB().guinchos; if(!window.isAdmin) guinchosGeral = guinchosGeral.filter(g => g.criadoPor === window.currentUserEmail);
+            let f = [];
+            if(t.length === 0) { const hj = window.getDataHoje(); const on = new Date(); on.setDate(on.getDate()-1); f = guinchosGeral.filter(g => g.dataShow && (g.dataShow.split(' ')[0] === hj || g.dataShow.split(' ')[0] === window.formatarDataBR(on))); } 
+            else { f = guinchosGeral.filter(g=>(g.dataShow&&g.dataShow.toLowerCase().includes(t))||(g.motNome&&g.motNome.toLowerCase().includes(t))||(g.placa&&g.placa.toLowerCase().includes(t))||(g.bpm&&g.bpm.toLowerCase().includes(t))||(g.talao&&g.talao.toLowerCase().includes(t))); }
+            
+            if(f.length===0){tb.innerHTML="<tr><td colspan='8' style='text-align:center;'>Nenhum encontrado.</td></tr>";return;} 
+            
+            f.sort((a,b) => b.id - a.id).forEach(g=>{
+                let bUser = window.isAdmin && g.criadoPor ? `<br><span style="font-size:9px; background:#edf2f7; color:#4a5568; padding:2px 4px; border-radius:4px; margin-top:2px; display:inline-block;">👤 ${g.criadoPor}</span>` : '';
+                let podeEditar = (window.isAdmin || g.criadoPor === window.currentUserEmail);
+                let btnDel = podeEditar ? `<button class="btn btn-del" onclick="excluirItem('guinchos', ${g.id})">🗑️</button>` : '';
+                tb.innerHTML+=`<tr><td class="mono-font">${g.dataShow}${bUser}</td><td><strong>${g.motNome}</strong><br><small class="mono-font">${g.motCpf?`CPF: ${g.motCpf}`:''}</small></td><td class="mono-font" style="text-transform: uppercase;">${g.placa}</td><td>${g.bpm}</td><td class="mono-font">${g.talao}</td><td>${g.patio}</td><td class="no-print"><button class="btn hide-leitura ${g.chegou?'btn-status-ok':'btn-status-pend'}" onclick="altStatusGuincho(${g.id})">${g.chegou?'✅ Chegou':'🕒 Pendente'}</button></td><td class="no-print">${btnDel}</td></tr>`;
+            }); 
+        }
+        window.altStatusGuincho = async function(id) { let g = window.getDB().guinchos.find(x => x.id === id); if(g) { g.chegou = !g.chegou; await setDoc(doc(dbFS, "guinchos", String(id)), g); } }
+
+        // SIOPM
+        window.salvarSiopm = async function() { const id=document.getElementById('sId').value || Date.now(); const b=document.getElementById('sBpm').value; const t=document.getElementById('sTalao').value; const p=document.getElementById('sPeriodo').value; if(!b||!t||!p)return; let obj = {id:Number(id), bpm:b, talao:t, periodo:p}; if(!document.getElementById('sId').value) { obj.data = window.getDataHoje(); obj.status = 'Aberto'; obj.desfecho = ''; } else { let ant = window.getDB().siopm.find(s=>s.id==id); obj.data = ant.data; obj.status = ant.status; obj.desfecho = ant.desfecho; } await setDoc(doc(dbFS, "siopm", String(id)), obj); window.cancelarEdicaoSiopm(); }
+        window.listarSiopm = function() { const tb=document.getElementById('tabelaSiopm'); tb.innerHTML=""; const fB=document.getElementById('filtroSiopmBpm').value; const fS=document.getElementById('filtroSiopmStatus').value; let f=window.getDB().siopm.filter(s=>(fB==='todos'||s.bpm===fB)&&(fS==='todos'||s.status===fS)); if(f.length===0){tb.innerHTML="<tr><td colspan='7' style='text-align:center;'>Nenhum registo.</td></tr>"; window.atualizarDashboard(); return;} f.sort((a,b) => b.id - a.id).forEach(s=>{tb.innerHTML+=`<tr><td class="mono-font">${s.data}</td><td><strong>${s.bpm}</strong></td><td class="mono-font">${s.talao}</td><td>${s.periodo}</td><td style="color:#718096; font-style:italic;">${s.desfecho||'-'}</td><td><span class="badge-siopm ${s.status==="Aberto"?"badge-aberto":"badge-encerrado"}">${s.status}</span></td><td class="no-print"><button class="btn-action hide-leitura ${s.status==="Aberto"?"btn-edit":"btn-cancel"}" onclick="encerrarOuReabrirSiopm(${s.id})" style="padding:6px 12px;">${s.status==="Aberto"?"🔓 Encerrar":"🔒 Reabrir"}</button> <button class="btn-action btn-del only-admin" onclick="excluirItem('siopm', ${s.id})">🗑️</button></td></tr>`;}); window.atualizarDashboard(); }
+        window.encerrarOuReabrirSiopm = async function(id) { let i = window.getDB().siopm.find(x => x.id === id); if(i.status === 'Aberto') { let d = prompt("A encerrar!\nInforme o desfecho:"); if(d !== null) { i.status = 'Encerrado'; i.desfecho = d.trim() || 'Sem informação'; await setDoc(doc(dbFS, "siopm", String(id)), i); window.registrarAuditoria('Encerrou SIOPM', `Talão: ${i.talao}`); } } else { if(confirm("Deseja reabrir?")) { i.status = 'Aberto'; i.desfecho = ''; await setDoc(doc(dbFS, "siopm", String(id)), i); window.registrarAuditoria('Reabriu SIOPM', `Talão: ${i.talao}`); } } }
+        window.prepararEdicaoSiopm = function(id) { let i = window.getDB().siopm.find(x => x.id === id); if(!i) return; document.getElementById('sId').value = i.id; document.getElementById('sBpm').value = i.bpm; document.getElementById('sTalao').value = i.talao; document.getElementById('sPeriodo').value = i.periodo; document.getElementById('btnSalvarSiopm').innerText = "💾 Atualizar"; document.getElementById('btnCancelarSiopm').style.display = "block"; window.scrollTo(0,0); }
+        window.cancelarEdicaoSiopm = function() { document.getElementById('sId').value = ""; document.getElementById('sBpm').value = ""; document.getElementById('sTalao').value = ""; document.getElementById('sPeriodo').value = "Dia"; document.getElementById('btnSalvarSiopm').innerText = "➕ Gerar Talão"; document.getElementById('btnCancelarSiopm').style.display = "none"; }
+
+        // O NOVO EXCLUIR ITEM (APAGA DIRETO DO FIREBASE)
+        window.excluirItem = async function(tabela, id) { 
+            let info = window.getDB()[tabela].find(x => x.id === id); if(!info) return;
+            let dono = info.criadoPor; if(!window.isAdmin && dono !== window.currentUserEmail) return alert("Ação negada: Você só tem permissão para apagar registos feitos por você.");
+
+            if(confirm("Confirma exclusão permanente deste registo?")) { 
+                await deleteDoc(doc(dbFS, tabela, String(id)));
+                let extra = info.nome || info.talao || info.placa || id;
+                window.registrarAuditoria('Excluiu Registo', `Apagou o item '${extra}' da tabela [${tabela}]`);
+            } 
+        }
+
+        // PERFIS DE USUÁRIOS
+        window.listarUsuarios = function() {
+            const tb = document.getElementById('tabelaUsuarios'); tb.innerHTML = ""; let perfis = window.getDB().perfis || {}; let emails = Object.keys(perfis);
+            if(emails.length === 0) return tb.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Nenhum utilizador.</td></tr>"; 
+            emails.forEach(u => {
+                let obj = perfis[u];
+                let htmlStatus = obj.status === 'pendente' ? '<span style="color:#d69e2e; font-weight:bold;">🟡 Pendente</span>' : obj.status === 'bloqueado' ? '<span style="color:#e53e3e; font-weight:bold;">🚫 Bloqueado</span>' : '<span style="color:#38a169; font-weight:bold;">✅ Aprovado</span>';
+                let onlineBadge = obj.isOnline ? '<span style="color:#38a169; font-size:10px;">🟢 Online</span>' : '<span style="color:#a0aec0; font-size:10px;">🔴 Offline</span>';
+                let htmlCargo = u === EMAIL_DO_ADMINISTRADOR ? '<strong>👑 Admin Geral</strong>' : `<select onchange="mudarCargo('${u}', this.value)" style="padding:4px; font-size:11px;"><option value="operador" ${obj.role==='operador'?'selected':''}>✍️ Operador</option><option value="leitura" ${obj.role==='leitura'?'selected':''}>👁️ Apenas Leitura</option></select>`;
+                let btnAcao = ''; let btnExcluir = '';
+                if (u !== EMAIL_DO_ADMINISTRADOR) {
+                    if (obj.status === 'pendente' || obj.status === 'bloqueado') btnAcao = `<button class="btn" style="background:#38a169; padding:5px 10px; font-size:11px;" onclick="aprovarUsuario('${u}')">✅ Aprovar</button>`;
+                    else btnAcao = `<button class="btn" style="background:#e53e3e; padding:5px 10px; font-size:11px;" onclick="bloquearUsuario('${u}')">🚫 Bloquear</button>`;
+                    btnExcluir = `<button class="btn btn-del" style="padding:5px 10px; font-size:11px; margin-left:5px;" onclick="excluirUsuario('${u}')">🗑️ Excluir</button>`;
+                }
+                tb.innerHTML += `<tr><td><strong>${u}</strong><br>${onlineBadge} <span style="font-size:9px; color:#a0aec0;">(Visto: ${obj.lastSeen || '-'})</span></td><td style="text-align:center; font-size:12px;">${htmlStatus}</td><td style="text-align:center;">${htmlCargo}</td><td style="text-align:center;">${btnAcao} ${btnExcluir}</td></tr>`;
+            });
+        }
+
+        window.aprovarUsuario = async function(email) { await setDoc(doc(dbFS, "perfis", email), { status: 'aprovado' }, { merge: true }); window.registrarAuditoria('Aprovou Utilizador', `Liberou: ${email}`); }
+        window.bloquearUsuario = async function(email) { if(confirm(`Bloquear ${email}?`)) { await setDoc(doc(dbFS, "perfis", email), { status: 'bloqueado' }, { merge: true }); window.registrarAuditoria('Bloqueou Utilizador', `Bloqueou: ${email}`); } }
+        window.mudarCargo = async function(email, novoCargo) { await setDoc(doc(dbFS, "perfis", email), { role: novoCargo }, { merge: true }); window.registrarAuditoria('Alterou Permissão', `Cargo de ${email}: ${novoCargo}`); }
+        window.excluirUsuario = async function(email) { if(email === EMAIL_DO_ADMINISTRADOR) return; if(confirm(`Excluir ${email}?`)) { await deleteDoc(doc(dbFS, "perfis", email)); window.registrarAuditoria('Excluiu Perfil', `Apagou: ${email}`); } }
+
+        // AUDITORIA (Exibição)
+        window.listarAuditoria = function() {
+            const t = document.getElementById('buscaAuditoria').value.toLowerCase().trim(); const tb = document.getElementById('tabelaAuditoria'); tb.innerHTML = "";
+            let log = window.getDB().auditoria || [];
+            if(t.length > 0) log = log.filter(l => l.user.toLowerCase().includes(t) || l.acao.toLowerCase().includes(t) || l.detalhe.toLowerCase().includes(t) || l.data.includes(t));
+            if(log.length === 0) return tb.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Nenhuma ação.</td></tr>"; 
+            log.forEach(l => { tb.innerHTML += `<tr><td class="mono-font">${l.data}</td><td><strong>${l.user}</strong></td><td><span style="background:#edf2f7; padding:3px 6px; border-radius:3px;">${l.acao}</span></td><td style="color:#4a5568;">${l.detalhe}</td></tr>`; });
+        }
+
+    </script>
+</body>
+</html>
