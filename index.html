@@ -225,7 +225,7 @@
             </div>
             <div class="sidebar-footer">
                 <button class="btn-global btn-backup only-admin" onclick="gerarBackupGeral()">💾 Baixar Backup Único</button>
-                <button class="btn-global btn-logout" onclick="solicitarTrocaTurno()">🚪 Sair do Sistema</button>
+                <button class="btn-global btn-logout" onclick="solicitarTrocaTurno()">🚪 Encerrar Turno (Sair)</button>
             </div>
         </div>
 
@@ -435,7 +435,7 @@
                 </table>
             </div>
 
-            <div id="tela-usuarios" class="screen">
+            <div id="tela-usuarios" class="screen only-master">
                 <h2><span>🛡️ Gestão de Perfis (Acesso Master)</span></h2>
                 
                 <div style="background:#f8fafc; padding:20px; border-left:5px solid #d69e2e; margin-bottom:25px; border-radius:4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -457,7 +457,7 @@
                 </table>
             </div>
 
-            <div id="tela-auditoria" class="screen">
+            <div id="tela-auditoria" class="screen only-admin">
                 <h2><span>📜 Histórico de Ações (Auditoria)</span></h2>
                 <input type="text" id="buscaAuditoria" placeholder="🔍 Pesquisar no histórico..." onkeyup="listarAuditoria()" style="margin-bottom: 15px; width: 100%; max-width: 500px; padding: 12px; border-radius: 20px; border: 2px solid #d69e2e;">
                 <table style="font-size: 12px;">
@@ -500,6 +500,7 @@
         let inatividadeTimer;
         const TEMPO_INATIVIDADE = 15 * 60 * 1000;
         const EMAIL_DO_ADMINISTRADOR = "lucaszulu@gmail.com"; 
+        
         const LISTA_POSTOS = ["Chefia", "Supervisor 190", "Supervisor Choque", ...Array.from({length: 12}, (_, i) => `Supervisor CPAM-${i+1}`)];
 
         window.eH = function(str) {
@@ -512,9 +513,7 @@
         
         window.setOnlineStatus = async function(isOnline) {
             if(window.currentUserEmail) { 
-                try { 
-                    await setDoc(doc(dbFS, "perfis", window.currentUserEmail), { isOnline: isOnline, lastSeen: window.getDataHoje() + ' ' + new Date().toLocaleTimeString() }, { merge: true }); 
-                } catch(e) {} 
+                try { await setDoc(doc(dbFS, "perfis", window.currentUserEmail), { isOnline: isOnline, lastSeen: window.getDataHoje() + ' ' + new Date().toLocaleTimeString() }, { merge: true }); } catch(e) {} 
             }
         }
 
@@ -527,17 +526,15 @@
         
         window.fazerLoginGoogle = async function() { 
             try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
-            catch (error) { console.error("Falha no popup do Google:", error); alert("Erro ao comunicar com a Google. Tente novamente."); }
+            catch (error) { console.error("Falha no popup do Google:", error); alert("Erro ao comunicar com a Google."); }
         };
         
         window.fazerLogout = async function() { 
-            if(window.postoAtivo && window.postoAtivo !== "Aguardando Aprovação") { 
-                try { await deleteDoc(doc(dbFS, "mesa_operacoes", window.postoAtivo)); } catch(e) {} 
-            }
+            if(window.postoAtivo && window.postoAtivo !== "Aguardando Aprovação") { try { await deleteDoc(doc(dbFS, "mesa_operacoes", window.postoAtivo)); } catch(e) {} }
             await window.setOnlineStatus(false); await signOut(auth); location.reload(); 
         };
 
-        window.solicitarTrocaTurno = function() { if(confirm(window.postoAtivo === "Aguardando Aprovação" ? "Deseja sair do sistema?" : "Encerrar o turno de " + window.postoAtivo + "?")) window.fazerLogout(); };
+        window.solicitarTrocaTurno = function() { if(confirm(window.postoAtivo === "Aguardando Aprovação" ? "Sair do sistema?" : "Encerrar o turno de " + window.postoAtivo + "?")) window.fazerLogout(); };
 
         window.registrarAuditoria = async function(acao, detalhe) {
             let ts = window.gId(); let autor = window.postoAtivo ? window.postoAtivo : window.currentUserEmail;
@@ -549,24 +546,25 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
-                    window.currentUserEmail = user.email;
-                    const userRef = doc(dbFS, "perfis", user.email);
+                    window.currentUserEmail = user.email.toLowerCase(); // Força minúsculo para a regra do banco
+                    const userRef = doc(dbFS, "perfis", window.currentUserEmail);
                     const docSnap = await getDoc(userRef);
-                    const isMaster = (user.email === EMAIL_DO_ADMINISTRADOR);
+                    const isMaster = (window.currentUserEmail === EMAIL_DO_ADMINISTRADOR);
                     
                     let dadosPerfil = {};
 
-                    // AUTO-REGISTO DE TRIAGEM
+                    // AUTO-CRIAÇÃO SE NÃO EXISTIR
                     if (!docSnap.exists() && !isMaster) {
                         dadosPerfil = { role: 'leitura', status: 'pendente', isOnline: true, lastSeen: window.getDataHoje() + ' ' + new Date().toLocaleTimeString() };
-                        try { await setDoc(userRef, dadosPerfil); } catch(e) { console.error("Erro triagem", e); }
+                        try { await setDoc(userRef, dadosPerfil); } catch(e) { console.error("Erro ao criar perfil:", e); }
                     } else if (docSnap.exists()) {
                         dadosPerfil = docSnap.data();
                     } else {
-                        dadosPerfil = { role: 'admin', status: 'aprovado' };
+                        dadosPerfil = { role: 'admin', status: 'aprovado' }; // É o Master
+                        await setDoc(userRef, dadosPerfil);
                     }
                     
-                    if(dadosPerfil.status === 'bloqueado') { alert("Acesso revogado."); await signOut(auth); return; }
+                    if(dadosPerfil.status === 'bloqueado') { alert("Acesso revogado pelo Comando."); await signOut(auth); return; }
                     
                     window.userStatus = dadosPerfil.status;
                     window.userRole = isMaster ? 'master' : dadosPerfil.role;
@@ -588,22 +586,28 @@
                         document.getElementById('tagAdmin').style.display = 'none';
                     }
                     
+                    // ISOLAMENTO DO PENDENTE
                     if(window.userStatus === 'pendente') {
                         document.body.classList.add('status-pendente'); 
                         document.getElementById('banner-pendente').style.display = 'block';
                         document.getElementById('login-screen').style.display = 'none';
-                        document.getElementById('role-selection-screen').style.display = 'none'; // Esconde a mesa
-                        document.getElementById('app-container').style.display = 'flex'; // Joga direto no Dashboard
+                        document.getElementById('role-selection-screen').style.display = 'none'; // Pula a mesa
+                        document.getElementById('app-container').style.display = 'flex'; 
                         
                         window.postoAtivo = "Aguardando Aprovação";
                         document.getElementById('infoFuncaoAtiva').innerText = "PENDENTE";
+                        
+                        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                        document.getElementById('tela-dashboard').classList.add('active');
+                        
                         window.setOnlineStatus(true);
-                    } else {
-                        document.body.classList.remove('status-pendente'); 
-                        document.getElementById('banner-pendente').style.display = 'none';
-                        document.getElementById('login-screen').style.display = 'none';
-                        window.iniciarMonitoramentoPostos(); // Segue fluxo normal de escolher mesa
+                        return; // Interrompe o carregamento de postos
                     }
+
+                    document.body.classList.remove('status-pendente'); 
+                    document.getElementById('banner-pendente').style.display = 'none';
+                    document.getElementById('login-screen').style.display = 'none';
+                    window.iniciarMonitoramentoPostos();
                     
                 } catch (erroDeLeitura) {
                     console.error("Erro na leitura de hierarquia:", erroDeLeitura); alert("⚠️ Falha de comunicação com o servidor."); await signOut(auth);
@@ -1126,7 +1130,7 @@
         }
 
         window.preAprovarMilitar = async function() {
-            let emailMilitar = document.getElementById('admNewEmail').value.trim(); let cargoMilitar = document.getElementById('admNewCargo').value;
+            let emailMilitar = document.getElementById('admNewEmail').value.trim().toLowerCase(); let cargoMilitar = document.getElementById('admNewCargo').value;
             if(!emailMilitar) return alert("Digite o e-mail!");
             await setDoc(doc(dbFS, "perfis", emailMilitar), { status: 'aprovado', role: cargoMilitar, isOnline: false, lastSeen: 'Criado via Master' });
             alert(`Acesso liberado para: ${emailMilitar}`); document.getElementById('admNewEmail').value = ''; window.registrarAuditoria('Criação Conta', `Email: ${emailMilitar} Role: ${cargoMilitar}`);
@@ -1141,15 +1145,18 @@
                 let hCargo = u === EMAIL_DO_ADMINISTRADOR ? '👑 Master' : `<select onchange="mudarCargo('${window.eH(u)}', this.value)"><option value="admin" ${obj.role==='admin'?'selected':''}>👮 Admin</option><option value="operador" ${obj.role==='operador'?'selected':''}>✍️ Operador</option><option value="leitura" ${obj.role==='leitura'?'selected':''}>👁️ Leitura</option></select>`;
                 let bAcao = ''; let bExc = '';
                 if (u !== EMAIL_DO_ADMINISTRADOR) {
-                    if (obj.status === 'pendente' || obj.status === 'bloqueado') bAcao = `<button class="btn" style="background:#38a169;" onclick="aprovarUsuario('${window.eH(u)}')">✅</button>`;
-                    else bAcao = `<button class="btn" style="background:#e53e3e;" onclick="bloquearUsuario('${window.eH(u)}')">🚫</button>`;
+                    if (obj.status === 'pendente' || obj.status === 'bloqueado') bAcao = `<button class="btn" style="background:#38a169;" onclick="aprovarUsuario('${window.eH(u)}')">✅ Aprovar</button>`;
+                    else bAcao = `<button class="btn" style="background:#e53e3e;" onclick="bloquearUsuario('${window.eH(u)}')">🚫 Bloquear</button>`;
                     bExc = `<button class="btn btn-del" onclick="excluirUsuario('${window.eH(u)}')">🗑️</button>`;
                 }
                 tb.innerHTML += `<tr><td><strong>${window.eH(u)}</strong><br><span style="font-size:9px;">Visto: ${window.eH(obj.lastSeen || '-')}</span></td><td>${hStatus}</td><td>${hCargo}</td><td>${bAcao} ${bExc}</td></tr>`;
             });
         }
 
-        window.aprovarUsuario = async function(email) { await setDoc(doc(dbFS, "perfis", email), { status: 'aprovado' }, { merge: true }); }
+        window.aprovarUsuario = async function(email) { 
+            await setDoc(doc(dbFS, "perfis", email), { status: 'aprovado' }, { merge: true }); 
+            alert(`Acesso de ${email} foi aprovado com sucesso!`);
+        }
         window.bloquearUsuario = async function(email) { if(confirm(`Bloquear ${email}?`)) { await setDoc(doc(dbFS, "perfis", email), { status: 'bloqueado' }, { merge: true }); } }
         window.mudarCargo = async function(email, role) { await setDoc(doc(dbFS, "perfis", email), { role: role }, { merge: true }); }
         window.excluirUsuario = async function(email) { if(email !== EMAIL_DO_ADMINISTRADOR && confirm(`Excluir ${email}?`)) { await deleteDoc(doc(dbFS, "perfis", email)); } }
