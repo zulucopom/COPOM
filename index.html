@@ -121,8 +121,8 @@
 
         /* CONTROLE DE VISIBILIDADE HIERÁRQUICA */
         #printIndividual, #printRelatorioGeral { display: none; }
-        .only-admin, .only-master { display: none; }
         
+        .only-admin, .only-master { display: none; }
         body.is-master .only-master { display: block !important; }
         body.role-admin .only-admin { display: block !important; }
         body.role-leitura .hide-leitura { display: none !important; }
@@ -418,7 +418,7 @@
 
                 <div class="form-section no-print hide-leitura">
                     <div class="form-grid">
-                        <div><label>Motorista</label><input type="text" id="gMotorista" list="listaMotoristasGuincho" placeholder="Nome..."><datalist id="listaMotoristasGuincho"></datalist></div>
+                        <div><label>Motorista (Digite p/ buscar)</label><input type="text" id="gMotorista" list="listaMotoristasGuincho" placeholder="Nome..."><datalist id="listaMotoristasGuincho"></datalist></div>
                         <div><label>Placa Guincho</label><input type="text" id="gPlaca" class="mono-font" style="text-transform: uppercase;"></div>
                         <div><label>BPM Solicitante</label><select id="gBpm"></select></div>
                         <div><label>Talão</label><input type="text" id="gTalao" class="mono-font"></div>
@@ -435,7 +435,7 @@
                 </table>
             </div>
 
-            <div id="tela-usuarios" class="screen only-master">
+            <div id="tela-usuarios" class="screen">
                 <h2><span>🛡️ Gestão de Perfis (Acesso Master)</span></h2>
                 
                 <div style="background:#f8fafc; padding:20px; border-left:5px solid #d69e2e; margin-bottom:25px; border-radius:4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -457,7 +457,7 @@
                 </table>
             </div>
 
-            <div id="tela-auditoria" class="screen only-admin">
+            <div id="tela-auditoria" class="screen">
                 <h2><span>📜 Histórico de Ações (Auditoria)</span></h2>
                 <input type="text" id="buscaAuditoria" placeholder="🔍 Pesquisar no histórico..." onkeyup="listarAuditoria()" style="margin-bottom: 15px; width: 100%; max-width: 500px; padding: 12px; border-radius: 20px; border: 2px solid #d69e2e;">
                 <table style="font-size: 12px;">
@@ -546,21 +546,24 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
-                    window.currentUserEmail = user.email.toLowerCase(); // Força minúsculo para a regra do banco
+                    // O e-mail exato do Google, preservando o caso para evitar bloqueio no Firebase
+                    window.currentUserEmail = user.email;
                     const userRef = doc(dbFS, "perfis", window.currentUserEmail);
                     const docSnap = await getDoc(userRef);
-                    const isMaster = (window.currentUserEmail === EMAIL_DO_ADMINISTRADOR);
+                    
+                    // Identificação do Master sempre em minúsculo por segurança da string oficial
+                    const isMaster = (window.currentUserEmail.toLowerCase() === EMAIL_DO_ADMINISTRADOR);
                     
                     let dadosPerfil = {};
 
-                    // AUTO-CRIAÇÃO SE NÃO EXISTIR
+                    // A SALA DE ESPERA - Cria o perfil e tranca o sistema
                     if (!docSnap.exists() && !isMaster) {
                         dadosPerfil = { role: 'leitura', status: 'pendente', isOnline: true, lastSeen: window.getDataHoje() + ' ' + new Date().toLocaleTimeString() };
                         try { await setDoc(userRef, dadosPerfil); } catch(e) { console.error("Erro ao criar perfil:", e); }
                     } else if (docSnap.exists()) {
                         dadosPerfil = docSnap.data();
                     } else {
-                        dadosPerfil = { role: 'admin', status: 'aprovado' }; // É o Master
+                        dadosPerfil = { role: 'admin', status: 'aprovado' }; 
                         await setDoc(userRef, dadosPerfil);
                     }
                     
@@ -586,22 +589,23 @@
                         document.getElementById('tagAdmin').style.display = 'none';
                     }
                     
-                    // ISOLAMENTO DO PENDENTE
+                    // LÓGICA DE BLOQUEIO VISUAL DA SALA DE ESPERA
                     if(window.userStatus === 'pendente') {
                         document.body.classList.add('status-pendente'); 
                         document.getElementById('banner-pendente').style.display = 'block';
                         document.getElementById('login-screen').style.display = 'none';
-                        document.getElementById('role-selection-screen').style.display = 'none'; // Pula a mesa
-                        document.getElementById('app-container').style.display = 'flex'; 
+                        document.getElementById('role-selection-screen').style.display = 'none'; // Esconde a mesa de postos
+                        document.getElementById('app-container').style.display = 'flex'; // Vai direto ao Painel
                         
                         window.postoAtivo = "Aguardando Aprovação";
                         document.getElementById('infoFuncaoAtiva').innerText = "PENDENTE";
                         
+                        // Garante que só vê a aba de Dashboard
                         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
                         document.getElementById('tela-dashboard').classList.add('active');
                         
                         window.setOnlineStatus(true);
-                        return; // Interrompe o carregamento de postos
+                        return; // O código pára aqui para ele não carregar o resto
                     }
 
                     document.body.classList.remove('status-pendente'); 
@@ -641,12 +645,7 @@
                 if(window.postoAtivoTemp === p) css += " selected";
                 if(estaOutro) css += " taken";
                 
-                let btnDerrubar = "";
-                if (estaOutro && window.temAcessoTotal()) {
-                    btnDerrubar = `<br><span style="color:#e53e3e; font-size:10px; font-weight:bold; background:#fff5f5; padding:2px 4px; border-radius:4px; display:inline-block; margin-top:5px; border:1px solid #feb2b2;">🛑 Clique para Derrubar</span>`;
-                }
-
-                grid.innerHTML += `<div class="${css}" onclick="selecionarPosto('${p}', ${estaOutro})"><span>${p}</span><small>${estaOutro ? '🚫 Ocupado por:<br>'+ocupante + btnDerrubar : '🟢 Vaga Livre'}</small></div>`;
+                grid.innerHTML += `<div class="${css}" onclick="selecionarPosto('${p}', ${estaOutro})"><span>${p}</span><small>${estaOutro ? '🚫 Ocupado por:<br>'+ocupante : '🟢 Vaga Livre'}</small></div>`;
             });
         }
 
@@ -1053,6 +1052,7 @@
             } catch(e) { alert("🚫 Acesso Negado."); }
         }
 
+        // NOVO: INSERIDO O HTML DO CPF NA TABELA DE GUINCHOS CONFORME O SEU PRINT
         window.listarGuinchos = function() { 
             const t=document.getElementById('buscaGuincho').value.toLowerCase().trim(); const tb=document.getElementById('tabelaGuinchos'); tb.innerHTML=""; 
             let guinchosGeral = window.getDB().guinchos; 
@@ -1065,7 +1065,11 @@
                 let bUser = window.temAcessoTotal() && g.criadoPor ? `<br><span style="font-size:9px;">👤 ${window.eH(g.criadoPor)}</span>` : '';
                 let podeEditar = (window.temAcessoTotal() || g.criadoPor === window.postoAtivo || g.criadoPor === window.currentUserEmail);
                 let btnDel = podeEditar ? `<button class="btn btn-del hide-leitura" onclick="excluirItem('guinchos', '${g.id}')">🗑️</button>` : '';
-                tb.innerHTML+=`<tr><td class="mono-font">${window.eH(g.dataShow)}${bUser}</td><td><strong>${window.eH(g.motNome)}</strong></td><td class="mono-font" style="text-transform: uppercase;">${window.eH(g.placa)}</td><td>${window.eH(g.bpm)}</td><td class="mono-font">${window.eH(g.talao)}</td><td>${window.eH(g.patio)}</td><td class="no-print"><button class="btn hide-leitura ${g.chegou?'btn-status-ok':'btn-status-pend'}" onclick="altStatusGuincho('${g.id}')">${g.chegou?'✅ Chegou':'🕒 Pendente'}</button></td><td class="no-print">${btnDel}</td></tr>`;
+                
+                // CAIXA DO CPF IGUAL AO SEU PRINT (AZUL COM LETRA BRANCA)
+                let badgeCpf = g.motCpf ? `<br><span style="font-size:10px; background:#2b6cb0; color:white; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;" class="mono-font">CPF: ${window.eH(g.motCpf)}</span>` : '';
+
+                tb.innerHTML+=`<tr><td class="mono-font">${window.eH(g.dataShow)}${bUser}</td><td><strong>${window.eH(g.motNome)}</strong>${badgeCpf}</td><td class="mono-font" style="text-transform: uppercase;">${window.eH(g.placa)}</td><td>${window.eH(g.bpm)}</td><td class="mono-font">${window.eH(g.talao)}</td><td>${window.eH(g.patio)}</td><td class="no-print"><button class="btn hide-leitura ${g.chegou?'btn-status-ok':'btn-status-pend'}" onclick="altStatusGuincho('${g.id}')">${g.chegou?'✅ Chegou':'🕒 Pendente'}</button></td><td class="no-print">${btnDel}</td></tr>`;
             }); 
         }
         window.altStatusGuincho = async function(id) { let g = window.getDB().guinchos.find(x => String(x.id) === String(id)); if(g) { g.chegou = !g.chegou; await setDoc(doc(dbFS, "guinchos", String(id)), g); } }
@@ -1130,7 +1134,7 @@
         }
 
         window.preAprovarMilitar = async function() {
-            let emailMilitar = document.getElementById('admNewEmail').value.trim().toLowerCase(); let cargoMilitar = document.getElementById('admNewCargo').value;
+            let emailMilitar = document.getElementById('admNewEmail').value.trim(); let cargoMilitar = document.getElementById('admNewCargo').value;
             if(!emailMilitar) return alert("Digite o e-mail!");
             await setDoc(doc(dbFS, "perfis", emailMilitar), { status: 'aprovado', role: cargoMilitar, isOnline: false, lastSeen: 'Criado via Master' });
             alert(`Acesso liberado para: ${emailMilitar}`); document.getElementById('admNewEmail').value = ''; window.registrarAuditoria('Criação Conta', `Email: ${emailMilitar} Role: ${cargoMilitar}`);
@@ -1142,9 +1146,9 @@
             emails.forEach(u => {
                 let obj = perfis[u];
                 let hStatus = obj.status === 'pendente' ? '🟡 Pendente' : obj.status === 'bloqueado' ? '🚫 Bloqueado' : '✅ Aprovado';
-                let hCargo = u === EMAIL_DO_ADMINISTRADOR ? '👑 Master' : `<select onchange="mudarCargo('${window.eH(u)}', this.value)"><option value="admin" ${obj.role==='admin'?'selected':''}>👮 Admin</option><option value="operador" ${obj.role==='operador'?'selected':''}>✍️ Operador</option><option value="leitura" ${obj.role==='leitura'?'selected':''}>👁️ Leitura</option></select>`;
+                let hCargo = u.toLowerCase() === EMAIL_DO_ADMINISTRADOR ? '👑 Master' : `<select onchange="mudarCargo('${window.eH(u)}', this.value)"><option value="admin" ${obj.role==='admin'?'selected':''}>👮 Admin</option><option value="operador" ${obj.role==='operador'?'selected':''}>✍️ Operador</option><option value="leitura" ${obj.role==='leitura'?'selected':''}>👁️ Leitura</option></select>`;
                 let bAcao = ''; let bExc = '';
-                if (u !== EMAIL_DO_ADMINISTRADOR) {
+                if (u.toLowerCase() !== EMAIL_DO_ADMINISTRADOR) {
                     if (obj.status === 'pendente' || obj.status === 'bloqueado') bAcao = `<button class="btn" style="background:#38a169;" onclick="aprovarUsuario('${window.eH(u)}')">✅ Aprovar</button>`;
                     else bAcao = `<button class="btn" style="background:#e53e3e;" onclick="bloquearUsuario('${window.eH(u)}')">🚫 Bloquear</button>`;
                     bExc = `<button class="btn btn-del" onclick="excluirUsuario('${window.eH(u)}')">🗑️</button>`;
@@ -1159,7 +1163,7 @@
         }
         window.bloquearUsuario = async function(email) { if(confirm(`Bloquear ${email}?`)) { await setDoc(doc(dbFS, "perfis", email), { status: 'bloqueado' }, { merge: true }); } }
         window.mudarCargo = async function(email, role) { await setDoc(doc(dbFS, "perfis", email), { role: role }, { merge: true }); }
-        window.excluirUsuario = async function(email) { if(email !== EMAIL_DO_ADMINISTRADOR && confirm(`Excluir ${email}?`)) { await deleteDoc(doc(dbFS, "perfis", email)); } }
+        window.excluirUsuario = async function(email) { if(email.toLowerCase() !== EMAIL_DO_ADMINISTRADOR && confirm(`Excluir ${email}?`)) { await deleteDoc(doc(dbFS, "perfis", email)); } }
 
         window.listarAuditoria = function() {
             const t = document.getElementById('buscaAuditoria').value.toLowerCase().trim(); const tb = document.getElementById('tabelaAuditoria'); tb.innerHTML = "";
@@ -1169,7 +1173,7 @@
             log.forEach(l => { tb.innerHTML += `<tr><td class="mono-font">${window.eH(l.data)}</td><td><strong>${window.eH(l.user)}</strong></td><td>${window.eH(l.acao)}</td><td>${window.eH(l.detalhe)}</td></tr>`; });
         }
 
-        // BACKUP GERAL (PROFUNDO)
+        // BACKUP GERAL PROFUNDO 
         window.gerarBackupGeral = async function() {
             if(!window.temAcessoTotal()) return alert("Apenas Administradores podem gerar backups.");
             
