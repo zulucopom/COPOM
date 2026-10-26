@@ -106,7 +106,7 @@
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(221, 107, 32, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(221, 107, 32, 0); } 100% { box-shadow: 0 0 0 0 rgba(221, 107, 32, 0); } }
 
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; font-size: 14px; position: relative; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;}
-        th, td { padding: 16px 20px; text-align: left; border-bottom: 1px solid #e2e8f0; word-wrap: break-word;}
+        th, td { padding: 16px 20px; text-align: left; border-bottom: 1px solid #e2e8f0; word-wrap: break-word; vertical-align: middle;}
         th { background-color: #2d3748; color: white; position: sticky; top: -40px; z-index: 10; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;}
         td { background-color: #fff; transition: background-color 0.2s ease;}
         tr:last-child td { border-bottom: none; }
@@ -163,11 +163,9 @@
         /* ============================================================================
            [ANCORA-TELA-190] E PERFIL CHEFIA - REGRAS DE VISIBILIDADE E SUPERVISÃO
            ============================================================================ */
-        /* Chefia não agenda guinchos e não cria registros (apenas edita quando clica em Editar) */
         body.is-chefia #btn-menu-guinchos { display: none !important; }
         body.is-chefia .chefia-hide-create:not(.modo-edicao-ativo) { display: none !important; }
 
-        /* Cabine 190 vê exclusivamente SIOPM Inoperante e Ocorrências de Vulto (+ Painel Geral) */
         body.is-190 #btn-menu-mapa,
         body.is-190 #btn-menu-guinchos,
         body.is-190 #btn-menu-efetivo,
@@ -450,7 +448,7 @@
                         <div><label>Talão COPOM</label><input type="text" id="oTalao" placeholder="Ex: 4589 ou 4589*" class="mono-font"></div>
                         <div style="grid-column: span 2;"><label>Histórico da Ocorrência</label><textarea id="oHistorico" rows="4" placeholder="Descreva os detalhes. (Obrigatório se usar * no talão)"></textarea></div>
                         <div style="grid-column: span 2; display: flex; gap: 12px; align-items: end;">
-                            <button class="btn btn-save" onclick="salvarOcorrencia()" style="width: auto; padding: 16px 30px;">💾 Registrar Ocorrência</button>
+                            <button class="btn btn-save" id="btnSalvarOcorrencia" onclick="salvarOcorrencia()" style="width: auto; padding: 16px 30px;">💾 Registrar Ocorrência</button>
                             <button class="btn btn-restore" id="btnCancelarOcorrencia" onclick="cancelarEdicaoOcorrencia()" style="display:none; padding: 16px 25px;">Cancelar Edição</button>
                         </div>
                     </div>
@@ -467,7 +465,7 @@
                 </table>
             </div>
 
-            <!-- [SETOR 09] GUINCHOS COM ENDEREÇO, BASE/ABORDAGEM E OPERAÇÃO DE TRÂNSITO (CHOQUE) -->
+            <!-- [SETOR 09] GUINCHOS COM EDIÇÃO, FILTRO DE OPERAÇÕES E DETALHES EXPANSÍVEIS -->
             <div id="tela-guinchos" class="screen">
                 <h2>
                     <span>Controle de Acionamentos (Guincho)</span>
@@ -476,7 +474,7 @@
                     </div>
                 </h2>
                 
-                <details class="no-print hide-leitura" style="margin-bottom: 30px; background: #f8fafc; padding: 20px 30px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                <details class="no-print hide-leitura chefia-hide-create" style="margin-bottom: 30px; background: #f8fafc; padding: 20px 30px; border: 1px solid #e2e8f0; border-radius: 12px;">
                     <summary style="font-weight: 700; cursor: pointer; color: #2b6cb0; font-size: 15px; outline: none; list-style: none; display: flex; align-items: center; gap: 10px;">
                         <span style="background: #ebf8ff; padding: 6px; border-radius: 50%;">➕</span> Gerenciar Motoristas de Guincho
                     </summary>
@@ -497,7 +495,9 @@
                     </table>
                 </details>
 
-                <div class="form-section no-print hide-leitura">
+                <div class="form-section no-print hide-leitura chefia-hide-create" id="formGuinchoArea">
+                    <div id="avisoEdicaoGuincho" style="display:none; color:#d69e2e; font-weight:700; font-size:15px; margin-bottom:20px; border-bottom:1px dashed #d69e2e; padding-bottom:10px;">⚠️ MODO DE EDIÇÃO ATIVADO - Corrigindo dados do acionamento de guincho</div>
+                    <input type="hidden" id="gId">
                     <div class="form-grid">
                         <div><label>Motorista (Digite p/ buscar)</label><input type="text" id="gMotorista" list="listaMotoristasGuincho" placeholder="Selecione o nome..."><datalist id="listaMotoristasGuincho"></datalist></div>
                         <div><label>Placa do Guincho</label><input type="text" id="gPlaca" class="mono-font" style="text-transform: uppercase;" placeholder="AAA0A00"></div>
@@ -535,23 +535,43 @@
                         </div>
                     </div>
 
-                    <div style="margin-top: 15px;">
-                        <button class="btn btn-save" onclick="salvarGuincho()" style="padding: 14px;">🚛 Despachar Guincho</button>
+                    <div style="margin-top: 15px; display: flex; gap: 12px;">
+                        <button class="btn btn-save" id="btnSalvarGuincho" onclick="salvarGuincho()" style="padding: 14px;">🚛 Despachar Guincho</button>
+                        <button class="btn btn-restore" id="btnCancelarGuincho" onclick="cancelarEdicaoGuincho()" style="display:none; padding: 14px; width: auto; min-width: 180px;">Cancelar Edição</button>
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
-                    <select id="filtroGuinchosStatus" onchange="listarGuinchos()" style="width: 250px; padding: 14px 20px; border-radius: 30px; border: 2px solid #cbd5e1; margin-bottom: 0; outline: none; background: #fff; font-weight: bold; color: #2d3748;">
-                        <option value="todos">🚦 Todos os Acionamentos</option>
-                        <option value="acionados">🕒 Apenas Em Rota (Acionados)</option>
-                        <option value="finalizados">✅ Apenas Finalizados (Pátio)</option>
+                <!-- BARRA DE FILTROS COM SEPARAÇÃO DE GUINCHOS COMUNS VS OPERAÇÕES -->
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                    <select id="filtroGuinchosStatus" onchange="listarGuinchos()" style="width: 240px; padding: 14px 18px; border-radius: 30px; border: 2px solid #cbd5e1; margin-bottom: 0; outline: none; background: #fff; font-weight: bold; color: #2d3748;">
+                        <option value="todos">🚦 Todos os Status</option>
+                        <option value="acionados">🕒 Apenas Em Rota</option>
+                        <option value="finalizados">✅ Apenas no Pátio</option>
                     </select>
-                    <input type="text" id="buscaGuincho" placeholder="🔍 Pesquisar placa, talão, endereço, operação ou motorista..." onkeyup="listarGuinchos()" style="flex: 1; min-width: 250px; padding: 14px 20px; border-radius: 30px; border: 2px solid #3182ce; margin-bottom: 0;">
+
+                    <select id="filtroGuinchosTipo" onchange="listarGuinchos()" style="width: 270px; padding: 14px 18px; border-radius: 30px; border: 2px solid #d69e2e; margin-bottom: 0; outline: none; background: #fffaf0; font-weight: bold; color: #975a16;">
+                        <option value="todos">📋 Todos (Guinchos + Operações)</option>
+                        <option value="comuns">🚛 Apenas Guinchos Comuns</option>
+                        <option value="operacoes">🚨 Apenas Operações de Trânsito</option>
+                    </select>
+
+                    <input type="text" id="buscaGuincho" placeholder="🔍 Pesquisar placa, talão, CPF, endereço, operação ou motorista..." onkeyup="listarGuinchos()" style="flex: 1; min-width: 240px; padding: 14px 20px; border-radius: 30px; border: 2px solid #3182ce; margin-bottom: 0;">
                 </div>
-                <p style="color: #718096; font-size: 13px; margin-top: -10px; margin-bottom: 15px; font-weight: bold;">⚠️ Mostrando apenas os despachos das últimas 48 horas (2 dias).</p>
+                <p style="color: #718096; font-size: 13px; margin-top: -10px; margin-bottom: 15px; font-weight: bold;">⚠️ Mostrando apenas os despachos das últimas 48 horas (2 dias). Clique em "👁️ Ver Detalhes" para exibir Recolha, Pátio e Operação.</p>
 
                 <table>
-                    <thead><tr><th style="width:140px;">Data / Hora</th><th>Motorista Responsável</th><th style="width:110px;">Placa</th><th style="width:130px;">BPM / Operação</th><th style="width:110px;">Talão</th><th>Recolha & Pátio Destino</th><th class="no-print" style="width:110px;">Acompanhamento</th><th class="no-print" style="width:70px;">Ação</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th style="width:130px;">Data / Hora</th>
+                            <th>Motorista & CPF</th>
+                            <th style="width:110px;">Placa</th>
+                            <th style="width:130px;">BPM</th>
+                            <th style="width:100px;">Talão</th>
+                            <th style="width:220px;">Detalhes (Recolha / Pátio)</th>
+                            <th class="no-print" style="width:115px;">Acompanhamento</th>
+                            <th class="no-print" style="width:110px;">Ações</th>
+                        </tr>
+                    </thead>
                     <tbody id="tabelaGuinchos"></tbody>
                 </table>
             </div>
@@ -658,10 +678,35 @@
             return Array.from(setUnidades);
         };
 
+        // Sanitizador HTML contra XSS
         window.eH = function(str) {
             if (str === null || str === undefined) return '';
             if (typeof str !== 'string') str = String(str);
             return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
+        };
+
+        // Sanitizador de argumentos JavaScript dentro de atributos HTML (onclick/onchange)
+        window.eAttr = function(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        };
+
+        // Trava de Segurança Backend/Client contra bypass de perfil "leitura" ou "pendente"
+        window.bloquearSeLeitura = function() {
+            if (window.userStatus !== 'aprovado' || window.postoAtivo === "Aguardando Aprovação" || !window.postoAtivo) {
+                alert("🚫 Alerta de Segurança: Sessão não habilitada para escrita.");
+                return true;
+            }
+            if (window.userRole === 'leitura') {
+                alert("🚫 Alerta de Segurança: Seu perfil possui permissão exclusiva de Somente Leitura.");
+                return true;
+            }
+            return false;
         };
 
         window.gId = function() { return Date.now(); };
@@ -684,7 +729,7 @@
             const hj = window.getDataLocalIso(new Date());
             document.getElementById('dataMapa').value = hj; 
             document.getElementById('dataRelatorioDashboard').value = hj; 
-            window.onload = resetarTimer; document.onmousemove = resetarTimer; document.onkeypress = resetarTimer; document.onclick = resetarTimer; document.onscroll = resetarTimer; 
+            resetarTimer(); document.onmousemove = resetarTimer; document.onkeypress = resetarTimer; document.onclick = resetarTimer; document.onscroll = resetarTimer; 
         };
 
         window.fazerLogin = async function() { try { await signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginSenha').value); } catch(e) { document.getElementById('msgErroLogin').style.display = 'block'; } };
@@ -801,7 +846,7 @@
                 
                 const ocupante = window.postosOcupados[p];
                 const estaEu = ocupante === window.currentUserEmail;
-                const estaOutro = ocupante && !estaEu;
+                const estaOutro = Boolean(ocupante && !estaEu);
                 let css = "role-item";
                 if(window.postoAtivoTemp === p) css += " selected";
                 if(estaOutro) css += " taken";
@@ -811,7 +856,7 @@
                     btnDerrubar = `<br><span style="color:#e53e3e; font-size:10px; font-weight:bold; background:#fff5f5; padding:3px 6px; border-radius:4px; display:inline-block; margin-top:6px; border:1px solid #feb2b2;">🛑 Clique para Derrubar</span>`;
                 }
 
-                grid.innerHTML += `<div class="${css}" onclick="selecionarPosto('${p}', ${estaOutro})"><span>${p}</span><small>${estaOutro ? '🚫 Ocupado por:<br>'+ocupante + btnDerrubar : '🟢 Vaga Livre'}</small></div>`;
+                grid.innerHTML += `<div class="${css}" onclick="selecionarPosto('${window.eAttr(p)}', ${estaOutro})"><span>${window.eH(p)}</span><small>${estaOutro ? '🚫 Ocupado por:<br>'+window.eH(ocupante) + btnDerrubar : '🟢 Vaga Livre'}</small></div>`;
             });
         }
 
@@ -830,25 +875,32 @@
         }
 
         window.confirmarPosto = async function() {
-            if(!window.postoAtivoTemp) return alert("Selecione a sua Função no grid.");
+            if(!window.postoAtivoTemp || !LISTA_POSTOS.includes(window.postoAtivoTemp)) {
+                return alert("Selecione uma Função válida no grid.");
+            }
+            if(window.postoAtivoTemp === "Chefia" && !window.temAcessoTotal()) {
+                return alert("🚫 Acesso restrito: Apenas Administradores podem assumir a mesa de Chefia.");
+            }
+            const ocupanteAtual = window.postosOcupados[window.postoAtivoTemp];
+            if(ocupanteAtual && ocupanteAtual !== window.currentUserEmail && !window.temAcessoTotal()) {
+                return alert("🚫 Este posto acabou de ser assumido por outro operador: " + ocupanteAtual);
+            }
+
             window.postoAtivo = window.postoAtivoTemp;
             await setDoc(doc(dbFS, "mesa_operacoes", window.postoAtivo), { user: window.currentUserEmail, ts: Date.now() });
             document.getElementById('role-selection-screen').style.display = 'none'; document.getElementById('app-container').style.display = 'flex';
             document.getElementById('infoFuncaoAtiva').innerText = window.postoAtivo;
             window.registrarAuditoria('Assumiu Turno', `Mesa: ${window.postoAtivo}`);
             
-            // Aplica classes de perfil de acordo com o Posto Ativo (Chefia, 190, Choque ou CPAs)
             document.body.classList.toggle('is-chefia', window.postoAtivo === 'Chefia');
             document.body.classList.toggle('is-190', window.postoAtivo === 'Supervisor 190');
             document.body.classList.toggle('is-choque', window.postoAtivo === 'Supervisor Choque');
 
-            // Exibe ou oculta o bloco de Operação de Trânsito nos Guinchos para o Supervisor Choque
             const blocoChoque = document.getElementById('blocoGuinchoChoque');
             if (blocoChoque) {
                 blocoChoque.style.display = (window.postoAtivo === 'Supervisor Choque' || window.temAcessoTotal()) ? 'block' : 'none';
             }
 
-            // Atualiza os batalhões nos selects conforme a jurisdição da cabine escolhida
             window.inicializarCamposDinamicos();
 
             resetarTimer(); iniciarSincronizacaoFirebase(); setTimeout(() => window.setOnlineStatus(true), 2000);
@@ -863,10 +915,10 @@
             Object.keys(window.postosOcupados).forEach(p => {
                 cont++;
                 const userEmail = window.postosOcupados[p];
-                html += `<div class="card-sup" style="background:#fff5f5; border:1px solid #feb2b2; border-left:5px solid #e53e3e; color:#2d3748; cursor:pointer;" onclick="derrubarPostoGeral('${p}')">
+                html += `<div class="card-sup" style="background:#fff5f5; border:1px solid #feb2b2; border-left:5px solid #e53e3e; color:#2d3748; cursor:pointer;" onclick="derrubarPostoGeral('${window.eAttr(p)}')">
                             <div>
-                                <span style="font-size:10px; font-weight:900; color:#e53e3e; display:block; text-transform: uppercase;">${p}</span>
-                                <span style="font-size:14px; font-weight:bold;">${userEmail}</span>
+                                <span style="font-size:10px; font-weight:900; color:#e53e3e; display:block; text-transform: uppercase;">${window.eH(p)}</span>
+                                <span style="font-size:14px; font-weight:bold;">${window.eH(userEmail)}</span>
                             </div>
                             <div style="font-size:11px; font-weight:bold; color:#c53030; background: #fed7d7; padding: 5px 10px; border-radius: 4px;">❌ DERRUBAR</div>
                          </div>`;
@@ -877,6 +929,7 @@
         }
 
         window.derrubarPostoGeral = async function(posto) {
+            if(!window.temAcessoTotal()) return;
             if(confirm(`Tem a certeza que deseja derrubar a conexão da mesa de ${posto}? O operador será deslogado.`)) {
                 await deleteDoc(doc(dbFS, "mesa_operacoes", posto));
                 window.registrarAuditoria('Derrubou Operador', `Forçou saída da mesa: ${posto}`);
@@ -915,21 +968,20 @@
 
         window.getDB = function() { return window.sgidb; }
 
-        // Popula os selects de Batalhões respeitando a Jurisdição do CPA / Especializada ativa
         window.inicializarCamposDinamicos = function() {
             const todasUnidades = window.obterTodasUnidadesMapeadas();
             const unidadesPosto = MAPA_JURISDICAO_CPA[window.postoAtivo] || todasUnidades;
 
             let bpmOptionsRestrito = `<option value="">Selecione...</option>`;
-            unidadesPosto.forEach(u => { bpmOptionsRestrito += `<option value="${u}">${u}</option>`; });
+            unidadesPosto.forEach(u => { bpmOptionsRestrito += `<option value="${window.eH(u)}">${window.eH(u)}</option>`; });
             bpmOptionsRestrito += `<option value="OUTROS">OUTROS...</option>`;
 
             let bpmOptionsGlobal = `<option value="">Selecione...</option>`;
-            todasUnidades.forEach(u => { bpmOptionsGlobal += `<option value="${u}">${u}</option>`; });
+            todasUnidades.forEach(u => { bpmOptionsGlobal += `<option value="${window.eH(u)}">${window.eH(u)}</option>`; });
             bpmOptionsGlobal += `<option value="OUTROS">OUTROS...</option>`;
 
             let fBpm = `<option value="todos">Todos</option>`;
-            unidadesPosto.forEach(u => { fBpm += `<option value="${u}">${u}</option>`; });
+            unidadesPosto.forEach(u => { fBpm += `<option value="${window.eH(u)}">${window.eH(u)}</option>`; });
 
             document.getElementById('gBpm').innerHTML = bpmOptionsRestrito;
             document.getElementById('oBpm').innerHTML = bpmOptionsRestrito;
@@ -1052,11 +1104,12 @@
 
                 html += `<div style="margin-bottom:30px;"><h3 class="print-section-title print-title-guincho">3. ACIONAMENTOS DE GUINCHO CIVIL</h3>`;
                 if (guinchosTurno.length===0) html += `<p>Nenhum acionamento de guincho.</p>`; else {
-                    html += `<table class="print-table"><thead><tr><th>Data/Hora</th><th>Motorista</th><th>Placa</th><th>BPM / Op.</th><th>Talão</th><th>Recolha / Endereço / Pátio</th><th>Status</th></tr></thead><tbody>`;
+                    html += `<table class="print-table"><thead><tr><th>Data/Hora</th><th>Motorista / CPF</th><th>Placa</th><th>BPM / Op.</th><th>Talão</th><th>Recolha / Endereço / Pátio</th><th>Status</th></tr></thead><tbody>`;
                     guinchosTurno.forEach(g => {
                         let infoOp = g.operacaoTransito ? `<br><small><strong>Op:</strong> ${window.eH(g.nomeOperacao)} (${g.quantidadeGuinchos || 1}x)</small>` : '';
+                        let infoCpf = g.motCpf ? `<br><small>CPF: ${window.eH(g.motCpf)}</small>` : '';
                         let infoRecolha = `${window.eH(g.tipoRecolha || 'Local da Abordagem')} - ${window.eH(g.enderecoRecolha || '-')} (Pátio: ${window.eH(g.patio)})`;
-                        html += `<tr><td>${window.eH(g.dataShow)}</td><td><strong>${window.eH(g.motNome)}</strong></td><td>${window.eH(g.placa)}</td><td>${window.eH(g.bpm)}${infoOp}</td><td>${window.eH(g.talao)}</td><td>${infoRecolha}</td><td><strong>${g.chegou?"✅ Pátio":"🕒 Trânsito"}</strong></td></tr>`;
+                        html += `<tr><td>${window.eH(g.dataShow)}</td><td><strong>${window.eH(g.motNome)}</strong>${infoCpf}</td><td>${window.eH(g.placa)}</td><td>${window.eH(g.bpm)}${infoOp}</td><td>${window.eH(g.talao)}</td><td>${infoRecolha}</td><td><strong>${g.chegou?"✅ Pátio":"🕒 Trânsito"}</strong></td></tr>`;
                     });
                     html += `</tbody></table>`;
                 } html += `</div>`;
@@ -1126,7 +1179,7 @@
                 sel.style.display = 'inline-block'; const atual = sel.value;
                 let html = `<option value="todos">👑 Master / Chefia: Todos os CPAs</option>`;
                 LISTA_POSTOS.forEach(posto => {
-                    html += `<option value="${posto}">📍 Filtro: ${posto}</option>`;
+                    html += `<option value="${window.eH(posto)}">📍 Filtro: ${window.eH(posto)}</option>`;
                 });
                 sel.innerHTML = html; sel.value = atual || 'todos';
             }
@@ -1147,7 +1200,7 @@
         window.atualizarContadorEfetivo = function() { document.getElementById('contadorEfetivo').innerText = `${window.getDB().efetivo.length} policiais na base oficial`; }
 
         window.salvarEfetivo = async function() {
-            if(window.postoAtivo === "Aguardando Aprovação") return alert("Acesso restrito à Sala de Triagem.");
+            if(window.bloquearSeLeitura()) return;
             if(window.postoAtivo === "Chefia" && !document.getElementById('eId').value) return alert("Perfil de Chefia realiza apenas supervisão e edição de registros existentes.");
             const id = document.getElementById('eId').value ? Number(document.getElementById('eId').value) : window.gId(); 
             const nome = document.getElementById('eNome').value.trim().toUpperCase();
@@ -1173,13 +1226,14 @@
             let f = window.getDB().efetivo.filter(p => p.nome.toLowerCase().includes(t) || p.unidade.toLowerCase().includes(t));
             if(f.length === 0) { tb.innerHTML = "<tr><td colspan='4' style='text-align:center; padding: 50px; color: #e53e3e; font-weight: bold;'>Policial não encontrado na Base.</td></tr>"; return; }
             f.forEach(p => {
-                let podeEditar = window.postoAtivo && window.postoAtivo !== "Aguardando Aprovação"; 
-                let btnEdit = podeEditar ? `<button class="btn btn-edit hide-leitura" onclick="prepararEdicaoEfetivo('${p.id}')">✏️ Editar</button>` : '';
-                let btnDel = (window.temAcessoTotal()) ? `<button class="btn btn-del only-admin" onclick="excluirItem('efetivo', '${p.id}')">🗑️</button>` : '';
+                let podeEditar = window.postoAtivo && window.postoAtivo !== "Aguardando Aprovação" && window.userRole !== 'leitura'; 
+                let btnEdit = podeEditar ? `<button class="btn btn-edit hide-leitura" onclick="prepararEdicaoEfetivo('${window.eAttr(p.id)}')">✏️ Editar</button>` : '';
+                let btnDel = (window.temAcessoTotal()) ? `<button class="btn btn-del only-admin" onclick="excluirItem('efetivo', '${window.eAttr(p.id)}')">🗑️</button>` : '';
                 tb.innerHTML += `<tr><td><strong>${window.eH(p.nome)}</strong></td><td><span style="background: #edf2f7; padding: 6px 12px; border-radius: 6px; font-size: 12px; color: #4a5568; border: 1px solid #cbd5e1; font-weight:600;">${window.eH(p.unidade)}</span></td><td class="mono-font">${window.eH(p.tel||'-')}</td><td class="no-print">${btnEdit} ${btnDel}</td></tr>`;
             });
         }
         window.prepararEdicaoEfetivo = function(id) {
+            if(window.bloquearSeLeitura()) return;
             const p = window.getDB().efetivo.find(x => String(x.id) === String(id)); if(!p) return;
             const det = document.getElementById('detailsEfetivo');
             det.classList.add('modo-edicao-ativo');
@@ -1207,7 +1261,7 @@
         }
         
         window.adicionarEscalaMapa = async function() {
-            if(window.postoAtivo === "Aguardando Aprovação") return alert("Acesso Restrito.");
+            if(window.bloquearSeLeitura()) return;
             if(window.postoAtivo === "Chefia" && !document.getElementById('mId').value) return alert("Perfil de Chefia realiza apenas supervisão e edição de mapas existentes.");
             let id = document.getElementById('mId').value ? Number(document.getElementById('mId').value) : window.gId();
             let f = document.getElementById('mFuncao').value; let n = document.getElementById('mNome').value.toUpperCase(); let u = document.getElementById('mUnidade').value; let c = document.getElementById('mCia').value; let d = document.getElementById('dataMapa').value;
@@ -1227,6 +1281,7 @@
         }
 
         window.prepararEdicaoMapa = function(id) {
+            if(window.bloquearSeLeitura()) return;
             let r = window.getDB().mapaForca.find(x => String(x.id) === String(id)); if(!r) return;
             document.getElementById('formMapaArea').classList.add('modo-edicao-ativo');
             document.getElementById('mId').value = r.id; document.getElementById('mFuncao').value = r.funcao; document.getElementById('mNome').value = r.nome; document.getElementById('mUnidade').value = r.unidade; document.getElementById('mCia').value = r.cia; document.getElementById('dataMapa').value = r.data;
@@ -1281,8 +1336,8 @@
                     let bUser = (window.temAcessoTotal() || window.postoAtivo === 'Chefia') ? `<span style="font-size:9px; background:#fff; color:#4a5568; padding:4px 8px; border-radius:12px; margin-top:8px; display:inline-block; border: 1px solid #cbd5e1; font-weight:700;">📍 Lançado por: ${window.eH(s.criadoPor || 'Legado')}</span>` : '';
                     
                     let podeEditar = (window.temAcessoTotal() || window.postoAtivo === 'Chefia' || s.criadoPor === window.postoAtivo || s.criadoPor === window.currentUserEmail);
-                    let btnEdit = podeEditar ? `<button class="btn-edit no-print hide-leitura" onclick="prepararEdicaoMapa('${s.id}')" style="margin-top:10px; margin-right:8px; display:inline-block; float:right; padding: 6px 12px; border-radius:6px;">✏️</button>` : '';
-                    let btnDel = podeEditar ? `<button class="btn-del no-print hide-leitura" onclick="excluirItem('mapaForca', '${s.id}')" style="margin-top:10px; display:block; float:right; border-radius:6px;">🗑️</button>` : '';
+                    let btnEdit = podeEditar ? `<button class="btn-edit no-print hide-leitura" onclick="prepararEdicaoMapa('${window.eAttr(s.id)}')" style="margin-top:10px; margin-right:8px; display:inline-block; float:right; padding: 6px 12px; border-radius:6px;">✏️</button>` : '';
+                    let btnDel = podeEditar ? `<button class="btn-del no-print hide-leitura" onclick="excluirItem('mapaForca', '${window.eAttr(s.id)}')" style="margin-top:10px; display:block; float:right; border-radius:6px;">🗑️</button>` : '';
                     
                     contSup.innerHTML += `<div class="card-sup"><div><span class="funcao">${window.eH(s.funcao)}</span><span class="nome">${window.eH(s.nome)}</span>${bUser}</div><div style="text-align:right"><span style="font-size:13px; display:block; font-weight:700; background:rgba(0,0,0,0.2); padding:4px 10px; border-radius:6px; margin-bottom:8px;">${window.eH(s.unidade)}</span><span class="mono-font" style="font-size:14px; color:#fbd38d;">${window.eH(s.tel||'')}</span><div style="clear:both;">${btnDel}${btnEdit}</div></div></div>`; 
                 }); 
@@ -1296,8 +1351,8 @@
                         let bUser = (window.temAcessoTotal() || window.postoAtivo === 'Chefia') ? `<div style="font-size:10px; color:#a0aec0; margin-top:4px; font-weight:700;">📍 Lançado via ${window.eH(m.criadoPor || 'Sistema Legado')}</div>` : '';
                         
                         let podeEditar = (window.temAcessoTotal() || window.postoAtivo === 'Chefia' || m.criadoPor === window.postoAtivo || m.criadoPor === window.currentUserEmail);
-                        let btnEdit = podeEditar ? `<button class="btn-edit hide-leitura" style="border-radius:6px;" onclick="prepararEdicaoMapa('${m.id}')">✏️ Edit</button> ` : '';
-                        let btnDel = podeEditar ? `<button class="btn-del hide-leitura" style="border-radius:6px;" onclick="excluirItem('mapaForca', '${m.id}')">🗑️ Del</button>` : '';
+                        let btnEdit = podeEditar ? `<button class="btn-edit hide-leitura" style="border-radius:6px;" onclick="prepararEdicaoMapa('${window.eAttr(m.id)}')">✏️ Edit</button> ` : '';
+                        let btnDel = podeEditar ? `<button class="btn-del hide-leitura" style="border-radius:6px;" onclick="excluirItem('mapaForca', '${window.eAttr(m.id)}')">🗑️ Del</button>` : '';
                         
                         html += `<div class="linha-militar ${m.funcao==='CFP'?'cfp':'cgp'}"><div class="info-funcao"><span class="badge ${m.funcao==='CFP'?'badge-cfp':'badge-cgp'}">${window.eH(m.funcao)}</span></div><div class="info-nome" style="font-size:15px;">${window.eH(m.nome)}${bUser}</div><div class="info-cia"><span style="background:#edf2f7; padding:4px 8px; border-radius:6px; border:1px solid #cbd5e1; font-weight:600;">${window.eH(m.cia)}</span></div><div class="info-tel mono-font" style="font-size:15px;">${window.eH(m.tel||'-')}</div><div class="no-print" style="min-width: 120px; text-align:right;">${btnEdit}${btnDel}</div></div>`; 
                     });
@@ -1334,7 +1389,7 @@
                                 <strong>🚓 Unidade:</strong> ${window.eH(o.bpm)} &nbsp;&nbsp;|&nbsp;&nbsp; 
                                 <strong>📜 Talão Oficial:</strong> <span class="mono-font" style="color:#2d3748; background:#edf2f7; padding:2px 6px; border-radius:4px;">${window.eH(o.talao)}</span>
                             </div>
-                            <button class="btn btn-save no-print" style="background:#2b6cb0; padding:6px 12px; font-size:11px; border-radius: 4px; width: auto;" onclick="baixarOcorrenciaInd('${o.id}')">🖨️ Imprimir Extrato</button>
+                            <button class="btn btn-save no-print" style="background:#2b6cb0; padding:6px 12px; font-size:11px; border-radius: 4px; width: auto;" onclick="baixarOcorrenciaInd('${window.eAttr(o.id)}')">🖨️ Imprimir Extrato</button>
                         </div>
                         <div style="white-space:pre-wrap; font-size:14px; margin-top:12px; line-height:1.5; color:#2d3748;">${window.eH(o.historico)}</div>
                     </div>`; 
@@ -1344,7 +1399,7 @@
         }
 
         window.salvarOcorrencia = async function() { 
-            if(window.postoAtivo === "Aguardando Aprovação") return alert("Acesso Negado à Base.");
+            if(window.bloquearSeLeitura()) return;
             if(window.postoAtivo === "Chefia" && !document.getElementById('oId').value) return alert("Perfil de Chefia realiza apenas supervisão e edição de ocorrências existentes.");
             let id = document.getElementById('oId').value ? Number(document.getElementById('oId').value) : window.gId();
             let b=document.getElementById('oBpm').value; if(b==='OUTROS') b=document.getElementById('oBpmOutro').value.toUpperCase(); 
@@ -1353,22 +1408,26 @@
             
             let obj = { id: id, bpm:b, talao:t, historico:h };
             if(!document.getElementById('oId').value) { obj.data = window.getDataHoje(); obj.criadoPor = window.postoAtivo || window.currentUserEmail; } 
-            else { let ant = window.getDB().ocorrencias.find(x => String(x.id) === String(id)); obj.data = ant.data; obj.criadoPor = ant.criadoPor; }
+            else { let ant = window.getDB().ocorrencias.find(x => String(x.id) === String(id)); obj.data = ant ? ant.data : window.getDataHoje(); obj.criadoPor = ant ? ant.criadoPor : window.postoAtivo; }
 
+            const btn = document.getElementById('btnSalvarOcorrencia');
+            if(btn) btn.disabled = true;
             try { await setDoc(doc(dbFS, "ocorrencias", String(id)), obj); window.registrarAuditoria('Registou Ocorrência em Livro', `Talão COPOM: ${t}`); window.cancelarEdicaoOcorrencia(); } catch (error) { alert("🚫 Base de Dados Bloqueada."); }
+            finally { if(btn) btn.disabled = false; }
         }
 
         window.prepararEdicaoOcorrencia = function(id) {
+            if(window.bloquearSeLeitura()) return;
             let o = window.getDB().ocorrencias.find(x => String(x.id) === String(id)); if(!o) return;
             document.getElementById('formOcorrenciaArea').classList.add('modo-edicao-ativo');
             document.getElementById('oId').value = o.id; const s = document.getElementById('oBpm');
             if(Array.from(s.options).some(opt => opt.value === o.bpm)) { s.value = o.bpm; document.getElementById('oBpmOutro').style.display = 'none'; } else { s.value = 'OUTROS'; document.getElementById('oBpmOutro').style.display = 'block'; document.getElementById('oBpmOutro').value = o.bpm; }
             document.getElementById('oTalao').value = o.talao; document.getElementById('oHistorico').value = o.historico;
-            document.querySelector('#tela-ocorrencias .btn-save').innerText = "💾 Sobrescrever Ocorrência"; document.querySelector('#tela-ocorrencias .btn-save').style.background = "#d69e2e"; document.getElementById('btnCancelarOcorrencia').style.display = "inline-block"; window.scrollTo({top: 0, behavior: 'smooth'});
+            document.getElementById('btnSalvarOcorrencia').innerText = "💾 Sobrescrever Ocorrência"; document.getElementById('btnSalvarOcorrencia').style.background = "#d69e2e"; document.getElementById('btnCancelarOcorrencia').style.display = "inline-block"; window.scrollTo({top: 0, behavior: 'smooth'});
         }
         window.cancelarEdicaoOcorrencia = function() {
             document.getElementById('formOcorrenciaArea').classList.remove('modo-edicao-ativo');
-            document.getElementById('oId').value = ""; document.getElementById('oBpm').value = ""; document.getElementById('oTalao').value = ""; document.getElementById('oHistorico').value = ""; document.querySelector('#tela-ocorrencias .btn-save').innerText = "💾 Registrar Ocorrência"; document.querySelector('#tela-ocorrencias .btn-save').style.background = "#48bb78"; document.getElementById('btnCancelarOcorrencia').style.display = "none";
+            document.getElementById('oId').value = ""; document.getElementById('oBpm').value = ""; document.getElementById('oTalao').value = ""; document.getElementById('oHistorico').value = ""; document.getElementById('btnSalvarOcorrencia').innerText = "💾 Registrar Ocorrência"; document.getElementById('btnSalvarOcorrencia').style.background = "#48bb78"; document.getElementById('btnCancelarOcorrencia').style.display = "none";
         }
 
         window.baixarOcorrenciaInd = function(id) {
@@ -1391,15 +1450,15 @@
             
             f.sort((a,b) => String(b.id).localeCompare(String(a.id))).forEach(o=>{
                 let podeEditar = (window.temAcessoTotal() || window.postoAtivo === 'Chefia' || o.criadoPor === window.postoAtivo || o.criadoPor === window.currentUserEmail);
-                let btnEdit = podeEditar ? `<button class="btn btn-edit no-print hide-leitura" onclick="prepararEdicaoOcorrencia('${o.id}')" style="padding: 8px 12px; border-radius: 4px;">✏️ Editar</button>` : '';
-                let btnPdf = podeEditar ? `<button class="btn btn-save no-print" style="background:#2b6cb0; padding:8px 12px; font-size:11px; border-radius: 4px;" onclick="baixarOcorrenciaInd('${o.id}')">🖨️ Extrato PDF</button>` : '';
-                let btnDel = podeEditar ? `<button class="btn btn-del hide-leitura" onclick="excluirItem('ocorrencias', '${o.id}')" style="padding: 8px 12px; border-radius: 4px;">🗑️ Anular</button>` : '';
+                let btnEdit = podeEditar ? `<button class="btn btn-edit no-print hide-leitura" onclick="prepararEdicaoOcorrencia('${window.eAttr(o.id)}')" style="padding: 8px 12px; border-radius: 4px;">✏️ Editar</button>` : '';
+                let btnPdf = podeEditar ? `<button class="btn btn-save no-print" style="background:#2b6cb0; padding:8px 12px; font-size:11px; border-radius: 4px;" onclick="baixarOcorrenciaInd('${window.eAttr(o.id)}')">🖨️ Extrato PDF</button>` : '';
+                let btnDel = podeEditar ? `<button class="btn btn-del hide-leitura" onclick="excluirItem('ocorrencias', '${window.eAttr(o.id)}')" style="padding: 8px 12px; border-radius: 4px;">🗑️ Anular</button>` : '';
                 let bUser = (window.temAcessoTotal() || window.postoAtivo === 'Chefia') && o.criadoPor ? `<div style="font-size:10px; color:#4a5568; background: #e2e8f0; padding:2px 6px; border-radius:12px; margin-top:5px; font-weight:bold; display:inline-block; border: 1px solid #cbd5e1;">📍 Posto: ${window.eH(o.criadoPor)}</div>` : '';
 
-                tb.innerHTML+=`<tr><td class="mono-font" style="font-size:14px; font-weight:bold;">${window.eH(o.data)}</td><td><span style="background:#edf2f7; border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 4px; font-weight: bold; color: #2d3748; display:inline-block; white-space:nowrap;">${window.eH(o.bpm)}</span></td><td class="mono-font" style="font-size:14px;">${window.eH(o.talao)}<br>${bUser}</td><td><button class="btn btn-edit no-print" id="btn-hist-${o.id}" style="background:#718096; padding:6px 12px; border-radius:4px; transition: all 0.2s;" onclick="toggleHistorico('${o.id}')">👁️ Ler Relatório</button><div id="full-${o.id}" style="display:none; white-space:pre-wrap; background:#fffaf0; padding:15px; margin-top:10px; border-left:4px solid #d69e2e; border-radius:0 8px 8px 0; color:#2d3748; line-height: 1.5; font-size:14px; box-shadow: var(--shadow-soft);">${window.eH(o.historico)}</div></td><td class="no-print"><div style="display:flex; flex-direction:column; gap:6px;">${btnEdit} ${btnPdf} ${btnDel}</div></td></tr>`;
+                tb.innerHTML+=`<tr><td class="mono-font" style="font-size:14px; font-weight:bold;">${window.eH(o.data)}</td><td><span style="background:#edf2f7; border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 4px; font-weight: bold; color: #2d3748; display:inline-block; white-space:nowrap;">${window.eH(o.bpm)}</span></td><td class="mono-font" style="font-size:14px;">${window.eH(o.talao)}<br>${bUser}</td><td><button class="btn btn-edit no-print" id="btn-hist-${window.eH(o.id)}" style="background:#718096; padding:6px 12px; border-radius:4px; transition: all 0.2s;" onclick="toggleHistorico('${window.eAttr(o.id)}')">👁️ Ler Relatório</button><div id="full-${window.eH(o.id)}" style="display:none; white-space:pre-wrap; background:#fffaf0; padding:15px; margin-top:10px; border-left:4px solid #d69e2e; border-radius:0 8px 8px 0; color:#2d3748; line-height: 1.5; font-size:14px; box-shadow: var(--shadow-soft);">${window.eH(o.historico)}</div></td><td class="no-print"><div style="display:flex; flex-direction:column; gap:6px;">${btnEdit} ${btnPdf} ${btnDel}</div></td></tr>`;
             }); 
         }
-        window.toggleHistorico = function(id) { let f=document.getElementById('full-'+id); let b=document.getElementById('btn-hist-'+id); if(f.style.display==='none'){f.style.display='block';b.innerHTML='🙈 Ocultar Leitura'; b.style.background="#4a5568";}else{f.style.display='none';b.innerHTML='👁️ Ler Relatório'; b.style.background="#718096";} }
+        window.toggleHistorico = function(id) { let f=document.getElementById('full-'+id); let b=document.getElementById('btn-hist-'+id); if(!f||!b)return; if(f.style.display==='none'){f.style.display='block';b.innerHTML='🙈 Ocultar Leitura'; b.style.background="#4a5568";}else{f.style.display='none';b.innerHTML='👁️ Ler Relatório'; b.style.background="#718096";} }
 
         // GESTÃO ABERTA DE MOTORISTAS (Guincheiros)
         window.carregarSelectMotoristas = function() { 
@@ -1411,11 +1470,12 @@
             
             lista.forEach(m => { 
                 dl.innerHTML += `<option value="${window.eH(m.nome)}">CPF OFICIAL: ${window.eH(m.cpf || 'DADOS PENDENTES')}</option>`; 
-                tb.innerHTML += `<tr><td><strong>${window.eH(m.nome)}</strong></td><td class="mono-font">${window.eH(m.cpf || '-')}</td><td><button class="btn btn-edit" style="padding:6px 12px;" onclick="prepararEdicaoMotorista('${m.id}')">✏️</button> <button class="btn btn-del" style="padding:6px 12px;" onclick="excluirMotorista('${m.id}')">🗑️</button></td></tr>`;
+                tb.innerHTML += `<tr><td><strong>${window.eH(m.nome)}</strong></td><td class="mono-font">${window.eH(m.cpf || '-')}</td><td><button class="btn btn-edit hide-leitura" style="padding:6px 12px;" onclick="prepararEdicaoMotorista('${window.eAttr(m.id)}')">✏️</button> <button class="btn btn-del hide-leitura" style="padding:6px 12px;" onclick="excluirMotorista('${window.eAttr(m.id)}')">🗑️</button></td></tr>`;
             }); 
         }
 
         window.prepararEdicaoMotorista = function(id) {
+            if(window.bloquearSeLeitura()) return;
             let m = window.getDB().motoristas.find(x => String(x.id) === String(id)); if(!m) return;
             document.getElementById('cadMotId').value = m.id;
             document.getElementById('cadMotNome').value = m.nome;
@@ -1435,6 +1495,7 @@
         }
 
         window.salvarNovoMotorista = async function() { 
+            if(window.bloquearSeLeitura()) return;
             let n = document.getElementById('cadMotNome').value.trim(); 
             let c = document.getElementById('cadMotCpf').value.trim(); 
             let cid = document.getElementById('cadMotId').value;
@@ -1449,14 +1510,20 @@
         }
 
         window.excluirMotorista = async function(id) {
+            if(window.bloquearSeLeitura()) return;
             if(confirm("Confirma a exclusão deste motorista da base de dados geral?")) {
                 try { await deleteDoc(doc(dbFS, "motoristas", String(id))); } catch(e) { alert("🚫 Erro ao tentar excluir no Firebase."); }
             }
         }
         
-        // [SETOR 09] SALVAMENTO DE GUINCHO COM ENDEREÇO, BASE/ABORDAGEM E OPERAÇÃO CHOQUE
+        // ============================================================================
+        // [SETOR 09] SALVAMENTO, EDIÇÃO E LISTAGEM DE GUINCHOS COM EXPANSÃO E FILTROS
+        // ============================================================================
         window.salvarGuincho = async function() { 
-            if(window.postoAtivo === "Aguardando Aprovação") return alert("Acesso restrito à Sala de Triagem.");
+            if(window.bloquearSeLeitura()) return;
+            let editId = document.getElementById('gId').value;
+            if(window.postoAtivo === "Chefia" && !editId) return alert("Perfil de Chefia realiza apenas supervisão e edição de acionamentos existentes.");
+
             let n = document.getElementById('gMotorista').value.trim();
             let b = document.getElementById('gBpm').value;
             let tipoRecolha = document.getElementById('gTipoRecolha').value;
@@ -1469,65 +1536,144 @@
             if(flagOpTransito && !nomeOperacao) return alert("Informe o Nome da Operação de Trânsito.");
 
             let mot = window.getDB().motoristas.find(x => x.nome.toLowerCase() === n.toLowerCase()); 
-            let id = window.gId();
+            let id = editId ? Number(editId) : window.gId();
+            let ant = editId ? window.getDB().guinchos.find(x => String(x.id) === String(id)) : null;
+
+            let obj = {
+                id: id,
+                dataShow: ant ? ant.dataShow : (window.getDataHoje() + ' ' + new Date().toLocaleTimeString().slice(0,5)),
+                motNome: mot ? mot.nome : n,
+                motCpf: mot ? (mot.cpf || '') : (ant ? (ant.motCpf || '') : ''),
+                placa: document.getElementById('gPlaca').value.trim().toUpperCase(),
+                bpm: b,
+                talao: document.getElementById('gTalao').value.trim(),
+                patio: document.getElementById('gPatio').value.trim(),
+                tipoRecolha: tipoRecolha,
+                enderecoRecolha: enderecoRecolha,
+                operacaoTransito: flagOpTransito,
+                nomeOperacao: nomeOperacao,
+                quantidadeGuinchos: qtdGuinchos,
+                chegou: ant ? ant.chegou : false,
+                criadoPor: ant ? (ant.criadoPor || window.postoAtivo) : (window.postoAtivo || window.currentUserEmail)
+            };
+
+            const btn = document.getElementById('btnSalvarGuincho');
+            if(btn) btn.disabled = true;
             try {
-                await setDoc(doc(dbFS, "guinchos", String(id)), {
-                    id: id,
-                    dataShow: window.getDataHoje() + ' ' + new Date().toLocaleTimeString().slice(0,5),
-                    motNome: mot ? mot.nome : n,
-                    motCpf: mot ? (mot.cpf || '') : '',
-                    placa: document.getElementById('gPlaca').value.toUpperCase(),
-                    bpm: b,
-                    talao: document.getElementById('gTalao').value,
-                    patio: document.getElementById('gPatio').value,
-                    tipoRecolha: tipoRecolha,
-                    enderecoRecolha: enderecoRecolha,
-                    operacaoTransito: flagOpTransito,
-                    nomeOperacao: nomeOperacao,
-                    quantidadeGuinchos: qtdGuinchos,
-                    chegou: false,
-                    criadoPor: window.postoAtivo || window.currentUserEmail
-                }); 
-                window.registrarAuditoria('Acionamento de Guincho Aprovado', `Placa Despachada: ${document.getElementById('gPlaca').value}`);
-                document.getElementById('gMotorista').value="";
-                document.getElementById('gPlaca').value="";
-                document.getElementById('gTalao').value="";
-                document.getElementById('gBpm').value="";
-                document.getElementById('gPatio').value="";
-                document.getElementById('gEnderecoRecolha').value="";
-                document.getElementById('gTipoRecolha').value="Local da Abordagem";
-                if(document.getElementById('gFlagOpTransito')) {
-                    document.getElementById('gFlagOpTransito').checked = false;
-                    document.getElementById('gNomeOperacao').value = "";
-                    document.getElementById('gQtdGuinchos').value = "1";
-                    window.alternarCamposOpTransito();
-                }
+                await setDoc(doc(dbFS, "guinchos", String(id)), obj); 
+                window.registrarAuditoria(editId ? 'Editou Acionamento de Guincho' : 'Acionamento de Guincho Aprovado', `Placa: ${obj.placa} | Pátio: ${obj.patio}`);
+                window.cancelarEdicaoGuincho();
             } catch(e) { alert("🚫 Firewall bloqueou a escrita."); }
+            finally { if(btn) btn.disabled = false; }
         }
 
-        // GUINCHOS AGORA MOSTRAM MÁXIMO DE 2 DIAS, ENDEREÇO DE RECOLHA E DETALHES DE OPERAÇÃO DO CHOQUE
+        window.prepararEdicaoGuincho = function(id) {
+            if(window.bloquearSeLeitura()) return;
+            let g = window.getDB().guinchos.find(x => String(x.id) === String(id));
+            if(!g) return;
+
+            document.getElementById('formGuinchoArea').classList.add('modo-edicao-ativo');
+            document.getElementById('gId').value = g.id;
+            document.getElementById('gMotorista').value = g.motNome || '';
+            document.getElementById('gPlaca').value = g.placa || '';
+            
+            const selBpm = document.getElementById('gBpm');
+            if (g.bpm && !Array.from(selBpm.options).some(o => o.value === g.bpm)) {
+                selBpm.innerHTML += `<option value="${window.eH(g.bpm)}">${window.eH(g.bpm)}</option>`;
+            }
+            selBpm.value = g.bpm || '';
+
+            document.getElementById('gTalao').value = g.talao || '';
+            document.getElementById('gPatio').value = g.patio || '';
+            document.getElementById('gTipoRecolha').value = g.tipoRecolha || 'Local da Abordagem';
+            document.getElementById('gEnderecoRecolha').value = g.enderecoRecolha || '';
+
+            if(document.getElementById('gFlagOpTransito')) {
+                const isOp = Boolean(g.operacaoTransito);
+                document.getElementById('gFlagOpTransito').checked = isOp;
+                document.getElementById('gNomeOperacao').value = g.nomeOperacao || '';
+                document.getElementById('gQtdGuinchos').value = g.quantidadeGuinchos || 1;
+                if(isOp) document.getElementById('blocoGuinchoChoque').style.display = 'block';
+                window.alternarCamposOpTransito();
+            }
+
+            document.getElementById('avisoEdicaoGuincho').style.display = 'block';
+            document.getElementById('btnSalvarGuincho').innerText = '💾 Atualizar Acionamento';
+            document.getElementById('btnSalvarGuincho').style.background = '#d69e2e';
+            document.getElementById('btnCancelarGuincho').style.display = 'inline-block';
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        window.cancelarEdicaoGuincho = function() {
+            document.getElementById('formGuinchoArea').classList.remove('modo-edicao-ativo');
+            document.getElementById('gId').value = "";
+            document.getElementById('gMotorista').value = "";
+            document.getElementById('gPlaca').value = "";
+            document.getElementById('gTalao').value = "";
+            document.getElementById('gBpm').value = "";
+            document.getElementById('gPatio').value = "";
+            document.getElementById('gEnderecoRecolha').value = "";
+            document.getElementById('gTipoRecolha').value = "Local da Abordagem";
+
+            if(document.getElementById('gFlagOpTransito')) {
+                document.getElementById('gFlagOpTransito').checked = false;
+                document.getElementById('gNomeOperacao').value = "";
+                document.getElementById('gQtdGuinchos').value = "1";
+                window.alternarCamposOpTransito();
+                document.getElementById('blocoGuinchoChoque').style.display = (window.postoAtivo === 'Supervisor Choque' || window.temAcessoTotal()) ? 'block' : 'none';
+            }
+
+            document.getElementById('avisoEdicaoGuincho').style.display = 'none';
+            document.getElementById('btnSalvarGuincho').innerText = '🚛 Despachar Guincho';
+            document.getElementById('btnSalvarGuincho').style.background = '#48bb78';
+            document.getElementById('btnCancelarGuincho').style.display = 'none';
+        }
+
+        window.toggleDetalhesGuincho = function(id) {
+            let box = document.getElementById('det-guincho-' + id);
+            let btn = document.getElementById('btn-det-guincho-' + id);
+            if(!box || !btn) return;
+            if(box.style.display === 'none') {
+                box.style.display = 'block';
+                btn.innerHTML = '🙈 Ocultar Detalhes';
+                btn.style.background = '#4a5568';
+            } else {
+                box.style.display = 'none';
+                btn.innerHTML = '👁️ Ver Detalhes';
+                btn.style.background = '#718096';
+            }
+        }
+
         window.listarGuinchos = function() { 
             const t = document.getElementById('buscaGuincho').value.toLowerCase().trim(); 
             const fStatus = document.getElementById('filtroGuinchosStatus').value;
+            const fTipo = document.getElementById('filtroGuinchosTipo') ? document.getElementById('filtroGuinchosTipo').value : 'todos';
             const tb = document.getElementById('tabelaGuinchos'); tb.innerHTML=""; 
             
-            if(window.postoAtivo === 'Chefia' && !window.temAcessoTotal()) return;
-            
             let guinchosGeral = window.getDB().guinchos; 
-            if(!window.temAcessoTotal()) guinchosGeral = guinchosGeral.filter(g => g.criadoPor === window.postoAtivo || g.criadoPor === window.currentUserEmail);
+            if(!window.temAcessoTotal() && window.postoAtivo !== 'Chefia') {
+                guinchosGeral = guinchosGeral.filter(g => g.criadoPor === window.postoAtivo || g.criadoPor === window.currentUserEmail);
+            }
             
             const limite2Dias = Date.now() - (2 * 24 * 60 * 60 * 1000);
             guinchosGeral = guinchosGeral.filter(g => g.id >= limite2Dias);
 
+            // Filtro de Status (Em Rota vs Pátio)
             if(fStatus === 'acionados') guinchosGeral = guinchosGeral.filter(g => !g.chegou);
             if(fStatus === 'finalizados') guinchosGeral = guinchosGeral.filter(g => g.chegou);
+
+            // Filtro de Tipo (Apenas Guinchos Comuns vs Apenas Operações de Trânsito)
+            if(fTipo === 'comuns') guinchosGeral = guinchosGeral.filter(g => !g.operacaoTransito);
+            if(fTipo === 'operacoes') guinchosGeral = guinchosGeral.filter(g => Boolean(g.operacaoTransito));
 
             let f = t.length === 0 ? guinchosGeral : guinchosGeral.filter(g =>
                 (g.dataShow && g.dataShow.toLowerCase().includes(t)) ||
                 (g.motNome && g.motNome.toLowerCase().includes(t)) ||
+                (g.motCpf && g.motCpf.toLowerCase().includes(t)) ||
                 (g.placa && g.placa.toLowerCase().includes(t)) ||
                 (g.bpm && g.bpm.toLowerCase().includes(t)) ||
                 (g.talao && g.talao.toLowerCase().includes(t)) ||
+                (g.patio && g.patio.toLowerCase().includes(t)) ||
                 (g.enderecoRecolha && g.enderecoRecolha.toLowerCase().includes(t)) ||
                 (g.nomeOperacao && g.nomeOperacao.toLowerCase().includes(t))
             );
@@ -1535,29 +1681,66 @@
             if(f.length===0){tb.innerHTML="<tr><td colspan='8' style='text-align:center; padding:40px; font-weight:700; color:#a0aec0;'>Nenhum acionamento encontrado com os filtros atuais.</td></tr>";return;} 
             
             f.sort((a,b) => String(b.id).localeCompare(String(a.id))).forEach(g=>{
-                let bUser = (window.temAcessoTotal()) && g.criadoPor ? `<br><span style="font-size:10px; color:#718096; background:#edf2f7; padding:3px 6px; border-radius:6px; border:1px solid #cbd5e1; display:inline-block; margin-top:5px;">👤 ${window.eH(g.criadoPor)}</span>` : '';
-                let podeEditar = (window.temAcessoTotal() || g.criadoPor === window.postoAtivo || g.criadoPor === window.currentUserEmail);
-                let btnDel = podeEditar ? `<button class="btn btn-del hide-leitura" onclick="excluirItem('guinchos', '${g.id}')" style="border-radius:6px; padding: 10px 14px;">🗑️</button>` : '';
+                let bUser = (window.temAcessoTotal() || window.postoAtivo === 'Chefia') && g.criadoPor ? `<br><span style="font-size:10px; color:#718096; background:#edf2f7; padding:3px 6px; border-radius:6px; border:1px solid #cbd5e1; display:inline-block; margin-top:5px;">👤 ${window.eH(g.criadoPor)}</span>` : '';
+                let podeEditar = (window.temAcessoTotal() || window.postoAtivo === 'Chefia' || g.criadoPor === window.postoAtivo || g.criadoPor === window.currentUserEmail);
+                let btnEdit = podeEditar ? `<button class="btn btn-edit hide-leitura" onclick="prepararEdicaoGuincho('${window.eAttr(g.id)}')" style="border-radius:6px; padding: 8px 12px;" title="Editar lançamento">✏️</button>` : '';
+                let btnDel = podeEditar ? `<button class="btn btn-del hide-leitura" onclick="excluirItem('guinchos', '${window.eAttr(g.id)}')" style="border-radius:6px; padding: 8px 12px;" title="Excluir lançamento">🗑️</button>` : '';
                 
-                let badgeCpf = g.motCpf ? `<br><span style="font-size:12px; background:#2b6cb0; color:white; padding:4px 10px; border-radius:12px; display:inline-block; margin-top:8px; font-weight:700; letter-spacing:1px; box-shadow:0 2px 4px rgba(43,108,176,0.3);" class="mono-font">CPF: ${window.eH(g.motCpf)}</span>` : '';
+                // Busca o CPF salvo no registro ou faz fallback automático no cadastro de motoristas
+                let cpfExibir = g.motCpf;
+                if(!cpfExibir && g.motNome) {
+                    let motCad = window.getDB().motoristas.find(x => x.nome.toLowerCase() === g.motNome.toLowerCase());
+                    if(motCad && motCad.cpf) cpfExibir = motCad.cpf;
+                }
+                let htmlCpf = `<div class="mono-font" style="font-size:12px; color:#4a5568; margin-top:4px;">CPF: <strong>${window.eH(cpfExibir || 'Não informado')}</strong></div>`;
 
-                let badgeOp = g.operacaoTransito ? `<div style="margin-top:6px; background:#fefcbf; color:#975a16; border:1px solid #fbd38d; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">🚨 Op. Trânsito: ${window.eH(g.nomeOperacao)} (${g.quantidadeGuinchos || 1} guincho${(g.quantidadeGuinchos||1)>1?'s':''})</div>` : '';
+                // Tag discreta abaixo do BPM apenas para sinalizar que pertence a uma Operação
+                let tagMiniOp = g.operacaoTransito ? `<div style="margin-top:4px;"><span style="background:#fefcbf; color:#975a16; border:1px solid #fbd38d; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">🚨 OP. TRÂNSITO</span></div>` : '';
 
-                let detalheRecolha = `
-                    <div style="font-size:12px; margin-bottom:4px;">
-                        <span style="background:#edf2f7; color:#2b6cb0; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid #cbd5e1;">📍 ${window.eH(g.tipoRecolha || 'Local da Abordagem')}</span>
-                        <strong style="color:#2d3748; margin-left:4px;">${window.eH(g.enderecoRecolha || 'Endereço não informado')}</strong>
+                // Conteúdo oculto que só aparece ao clicar em "👁️ Ver Detalhes"
+                let blocoOpExpandido = g.operacaoTransito ? `
+                    <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #cbd5e1; color:#975a16;">
+                        <strong>🚨 Operação:</strong> ${window.eH(g.nomeOperacao || '-')} <br>
+                        <strong>🔢 Qtd. Guinchos:</strong> ${window.eH(g.quantidadeGuinchos || 1)}
                     </div>
-                    <div style="font-size:12px; color:#718096;">🏁 Pátio Destino: <strong>${window.eH(g.patio || '-')}</strong></div>
+                ` : '';
+
+                let htmlDetalhesExpandir = `
+                    <button class="btn btn-edit no-print" id="btn-det-guincho-${window.eH(g.id)}" style="background:#718096; padding:7px 14px; border-radius:6px; font-size:12px;" onclick="toggleDetalhesGuincho('${window.eAttr(g.id)}')">👁️ Ver Detalhes</button>
+                    <div id="det-guincho-${window.eH(g.id)}" style="display:none; background:#f8fafc; padding:12px 14px; margin-top:8px; border-left:4px solid #2b6cb0; border-radius:0 8px 8px 0; font-size:13px; line-height:1.6; color:#2d3748; box-shadow:var(--shadow-soft); text-align:left;">
+                        <div><strong>📍 Recolha:</strong> ${window.eH(g.tipoRecolha || 'Local da Abordagem')}</div>
+                        <div><strong>🗺️ Endereço:</strong> ${window.eH(g.enderecoRecolha || 'Não informado')}</div>
+                        <div><strong>🏁 Pátio Destino:</strong> ${window.eH(g.patio || 'Não informado')}</div>
+                        ${blocoOpExpandido}
+                    </div>
                 `;
 
-                tb.innerHTML+=`<tr class="${g.chegou?'row-sucesso':'row-atencao'}"><td class="mono-font" style="font-size:14px; font-weight:700;">${window.eH(g.dataShow)}${bUser}</td><td><strong style="font-size:15px; color:#1a202c;">${window.eH(g.motNome)}</strong>${badgeCpf}</td><td><span class="mono-font" style="text-transform: uppercase; background:#f8fafc; border:1px solid #cbd5e1; padding:6px 10px; border-radius:6px;">${window.eH(g.placa)}</span></td><td><strong style="color:#2b6cb0; font-size:15px;">${window.eH(g.bpm)}</strong>${badgeOp}</td><td class="mono-font" style="font-size:15px;">${window.eH(g.talao)}</td><td>${detalheRecolha}</td><td class="no-print"><button class="btn hide-leitura ${g.chegou?'btn-status-ok':'btn-status-pend'}" style="width: 110px; padding: 10px; border-radius: 8px; box-shadow: var(--shadow-soft); transition: all 0.2s ease;" onclick="altStatusGuincho('${g.id}')">${g.chegou?'✅ PÁTIO':'🕒 EM ROTA'}</button></td><td class="no-print">${btnDel}</td></tr>`;
+                tb.innerHTML += `
+                    <tr class="${g.chegou?'row-sucesso':'row-atencao'}">
+                        <td class="mono-font" style="font-size:13px; font-weight:700;">${window.eH(g.dataShow)}${bUser}</td>
+                        <td>
+                            <strong style="font-size:15px; color:#1a202c;">${window.eH(g.motNome)}</strong>
+                            ${htmlCpf}
+                        </td>
+                        <td><span class="mono-font" style="text-transform: uppercase; background:#f8fafc; border:1px solid #cbd5e1; padding:6px 10px; border-radius:6px;">${window.eH(g.placa)}</span></td>
+                        <td><strong style="color:#2b6cb0; font-size:15px;">${window.eH(g.bpm)}</strong>${tagMiniOp}</td>
+                        <td class="mono-font" style="font-size:15px; font-weight:700;">${window.eH(g.talao)}</td>
+                        <td>${htmlDetalhesExpandir}</td>
+                        <td class="no-print"><button class="btn hide-leitura ${g.chegou?'btn-status-ok':'btn-status-pend'}" style="width: 105px; padding: 9px; border-radius: 8px; box-shadow: var(--shadow-soft);" onclick="altStatusGuincho('${window.eAttr(g.id)}')">${g.chegou?'✅ PÁTIO':'🕒 EM ROTA'}</button></td>
+                        <td class="no-print"><div style="display:flex; gap:6px;">${btnEdit}${btnDel}</div></td>
+                    </tr>
+                `;
             }); 
         }
-        window.altStatusGuincho = async function(id) { let g = window.getDB().guinchos.find(x => String(x.id) === String(id)); if(g) { g.chegou = !g.chegou; await setDoc(doc(dbFS, "guinchos", String(id)), g); } }
+
+        window.altStatusGuincho = async function(id) {
+            if(window.bloquearSeLeitura()) return;
+            let g = window.getDB().guinchos.find(x => String(x.id) === String(id));
+            if(g) { g.chegou = !g.chegou; await setDoc(doc(dbFS, "guinchos", String(id)), g); }
+        }
 
         window.salvarSiopm = async function() { 
-            if(window.postoAtivo === "Aguardando Aprovação") return alert("Acesso Negado.");
+            if(window.bloquearSeLeitura()) return;
             const id = document.getElementById('sId').value ? Number(document.getElementById('sId').value) : window.gId(); 
             const b = document.getElementById('sBpm').value; const t = document.getElementById('sTalao').value; const p = document.getElementById('sPeriodo').value; 
             if(!b || !t || !p) return alert("Obrigatório a inserção dos dados vitais da contingência."); 
@@ -1573,6 +1756,7 @@
         }
 
         window.encerrarOuReabrirSiopm = async function(id) { 
+            if(window.bloquearSeLeitura()) return;
             let i = window.getDB().siopm.find(x => String(x.id) === String(id)); if(!i) return;
             const podeAlterar = (window.temAcessoTotal() || window.postoAtivo === 'Chefia' || i.criadoPor === window.postoAtivo || i.criadoPor === window.currentUserEmail);
             if(!podeAlterar) return alert(`🚫 ACESSO RESTRITO: Arquivo blindado pelo oficial lançador (${i.criadoPor}).`);
@@ -1604,7 +1788,7 @@
                 let bUser = (window.temAcessoTotal() || window.postoAtivo === 'Chefia') ? `<br><span style="font-size:9px; color:#4a5568; background:#edf2f7; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px; border:1px solid #cbd5e1;">📍 Posto: ${window.eH(s.criadoPor)}</span>` : '';
                 
                 let podeEditar = (window.temAcessoTotal() || window.postoAtivo === 'Chefia' || s.criadoPor === window.postoAtivo || s.criadoPor === window.currentUserEmail);
-                let btnHtml = podeEditar ? `<button class="btn-action hide-leitura btn ${s.status==="Aberto"?"btn-save":"btn-print"}" style="padding: 6px 12px; margin-right: 5px; font-size: 11px;" onclick="encerrarOuReabrirSiopm('${s.id}')">${s.status==="Aberto"?"🔓 Dar Baixa":"🔒 Estornar"}</button> <button class="btn-action btn-del hide-leitura" style="padding: 6px 12px;" onclick="excluirItem('siopm', '${s.id}')">🗑️</button>` : '';
+                let btnHtml = podeEditar ? `<button class="btn-action hide-leitura btn ${s.status==="Aberto"?"btn-save":"btn-print"}" style="padding: 6px 12px; margin-right: 5px; font-size: 11px;" onclick="encerrarOuReabrirSiopm('${window.eAttr(s.id)}')">${s.status==="Aberto"?"🔓 Dar Baixa":"🔒 Estornar"}</button> <button class="btn-action btn-del hide-leitura" style="padding: 6px 12px;" onclick="excluirItem('siopm', '${window.eAttr(s.id)}')">🗑️</button>` : '';
                 
                 let desfechoEstilo = s.desfecho ? `color:#166534; font-weight:bold; background:#f0fdf4; padding:4px 8px; border-radius:4px; border:1px solid #86efac; display:inline-block;` : `color:#a0aec0; font-style:italic;`;
 
@@ -1612,10 +1796,11 @@
             }); 
             window.atualizarDashboard(); 
         }
-        window.prepararEdicaoSiopm = function(id) { let i = window.getDB().siopm.find(x => String(x.id) === String(id)); if(!i) return; document.getElementById('sId').value = i.id; document.getElementById('sBpm').value = i.bpm; document.getElementById('sTalao').value = i.talao; document.getElementById('sPeriodo').value = i.periodo; document.getElementById('btnSalvarSiopm').innerText = "💾 Forçar Atualização"; document.getElementById('btnSalvarSiopm').style.background = "#d69e2e"; document.getElementById('btnCancelarSiopm').style.display = "block"; window.scrollTo({top: 0, behavior: 'smooth'}); }
+        window.prepararEdicaoSiopm = function(id) { if(window.bloquearSeLeitura()) return; let i = window.getDB().siopm.find(x => String(x.id) === String(id)); if(!i) return; document.getElementById('sId').value = i.id; document.getElementById('sBpm').value = i.bpm; document.getElementById('sTalao').value = i.talao; document.getElementById('sPeriodo').value = i.periodo; document.getElementById('btnSalvarSiopm').innerText = "💾 Forçar Atualização"; document.getElementById('btnSalvarSiopm').style.background = "#d69e2e"; document.getElementById('btnCancelarSiopm').style.display = "block"; window.scrollTo({top: 0, behavior: 'smooth'}); }
         window.cancelarEdicaoSiopm = function() { document.getElementById('sId').value = ""; document.getElementById('sBpm').value = ""; document.getElementById('sTalao').value = ""; document.getElementById('sPeriodo').value = "Dia"; document.getElementById('btnSalvarSiopm').innerText = "➕ Gerar Talão"; document.getElementById('btnSalvarSiopm').style.background = "#48bb78"; document.getElementById('btnCancelarSiopm').style.display = "none"; }
 
         window.excluirItem = async function(tabela, id) { 
+            if(window.bloquearSeLeitura()) return;
             if(tabela === 'motoristas') return;
 
             let info = window.getDB()[tabela].find(x => String(x.id) === String(id)); if(!info) return;
@@ -1624,6 +1809,7 @@
         }
 
         window.preAprovarMilitar = async function() {
+            if(window.userRole !== 'master') return alert("🚫 Acesso restrito ao Administrador Master.");
             let emailMilitar = document.getElementById('admNewEmail').value.trim().toLowerCase(); let cargoMilitar = document.getElementById('admNewCargo').value;
             if(!emailMilitar) return alert("Por favor, declare o endereço do contato.");
             await setDoc(doc(dbFS, "perfis", emailMilitar), { status: 'aprovado', role: cargoMilitar, isOnline: false, lastSeen: 'Criado via Comando Master' });
@@ -1635,25 +1821,27 @@
             if(emails.length === 0) return tb.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Arquivo do efetivo digital vazio.</td></tr>"; 
             emails.forEach(u => {
                 let obj = perfis[u];
+                let uAttr = window.eAttr(u);
                 let hStatus = obj.status === 'pendente' ? '🟡 Fila de Triagem' : obj.status === 'bloqueado' ? '🚫 Cadastro Suspenso' : '✅ Autorizado pelo Comando';
-                let hCargo = u.toLowerCase() === EMAIL_DO_ADMINISTRADOR ? '👑 Proprietário / Master' : `<select onchange="mudarCargo('${window.eH(u)}', this.value)" style="padding: 8px; border-radius: 6px; font-weight: 700; max-width: 180px;"><option value="admin" ${obj.role==='admin'?'selected':''}>👮 Admin (Total)</option><option value="operador" ${obj.role==='operador'?'selected':''}>✍️ Operador Rádio</option><option value="leitura" ${obj.role==='leitura'?'selected':''}>👁️ Observador Civil</option></select>`;
+                let hCargo = u.toLowerCase() === EMAIL_DO_ADMINISTRADOR ? '👑 Proprietário / Master' : `<select onchange="mudarCargo('${uAttr}', this.value)" style="padding: 8px; border-radius: 6px; font-weight: 700; max-width: 180px;"><option value="admin" ${obj.role==='admin'?'selected':''}>👮 Admin (Total)</option><option value="operador" ${obj.role==='operador'?'selected':''}>✍️ Operador Rádio</option><option value="leitura" ${obj.role==='leitura'?'selected':''}>👁️ Observador Civil</option></select>`;
                 let bAcao = ''; let bExc = '';
                 if (u.toLowerCase() !== EMAIL_DO_ADMINISTRADOR) {
-                    if (obj.status === 'pendente' || obj.status === 'bloqueado') bAcao = `<button class="btn" style="background:#38a169; padding: 10px 14px;" onclick="aprovarUsuario('${window.eH(u)}')">✅ Ativar Ficha</button>`;
-                    else bAcao = `<button class="btn" style="background:#e53e3e; padding: 10px 14px;" onclick="bloquearUsuario('${window.eH(u)}')">🚫 Desabilitar</button>`;
-                    bExc = `<button class="btn btn-del" style="padding: 10px 14px;" onclick="excluirUsuario('${window.eH(u)}')">🗑️ Apagar</button>`;
+                    if (obj.status === 'pendente' || obj.status === 'bloqueado') bAcao = `<button class="btn" style="background:#38a169; padding: 10px 14px;" onclick="aprovarUsuario('${uAttr}')">✅ Ativar Ficha</button>`;
+                    else bAcao = `<button class="btn" style="background:#e53e3e; padding: 10px 14px;" onclick="bloquearUsuario('${uAttr}')">🚫 Desabilitar</button>`;
+                    bExc = `<button class="btn btn-del" style="padding: 10px 14px;" onclick="excluirUsuario('${uAttr}')">🗑️ Apagar</button>`;
                 }
                 tb.innerHTML += `<tr><td style="font-size:15px; word-wrap:break-word;"><strong>${window.eH(u)}</strong><br><span style="font-size:11px; color: #718096; font-weight: 700;">Último acesso gravado no satélite: ${window.eH(obj.lastSeen || '-')}</span></td><td><span style="background:#f8fafc; padding:6px 12px; border-radius:6px; border:1px solid #cbd5e1; font-weight:700; font-size:13px; display:inline-block;">${hStatus}</span></td><td>${hCargo}</td><td><div style="display:flex; flex-wrap:wrap; gap:8px;">${bAcao} ${bExc}</div></td></tr>`;
             });
         }
 
         window.aprovarUsuario = async function(email) { 
+            if(window.userRole !== 'master') return;
             await setDoc(doc(dbFS, "perfis", email), { status: 'aprovado' }, { merge: true }); 
             alert(`A ficha e as chaves de acesso do policial ${email} foram devidamente atualizadas!`);
         }
-        window.bloquearUsuario = async function(email) { if(confirm(`Atenção Master: Deseja estornar instantaneamente o perfil digital pertencente a ${email}?`)) { await setDoc(doc(dbFS, "perfis", email), { status: 'bloqueado' }, { merge: true }); } }
-        window.mudarCargo = async function(email, role) { await setDoc(doc(dbFS, "perfis", email), { role: role }, { merge: true }); }
-        window.excluirUsuario = async function(email) { if(email.toLowerCase() !== EMAIL_DO_ADMINISTRADOR && confirm(`Desintegrar totalmente a ficha de ${email} dos HDs militares? Não há chance de desfazer este erro.`)) { await deleteDoc(doc(dbFS, "perfis", email)); } }
+        window.bloquearUsuario = async function(email) { if(window.userRole !== 'master') return; if(confirm(`Atenção Master: Deseja estornar instantaneamente o perfil digital pertencente a ${email}?`)) { await setDoc(doc(dbFS, "perfis", email), { status: 'bloqueado' }, { merge: true }); } }
+        window.mudarCargo = async function(email, role) { if(window.userRole !== 'master') return; await setDoc(doc(dbFS, "perfis", email), { role: role }, { merge: true }); }
+        window.excluirUsuario = async function(email) { if(window.userRole !== 'master') return; if(email.toLowerCase() !== EMAIL_DO_ADMINISTRADOR && confirm(`Desintegrar totalmente a ficha de ${email} dos HDs militares? Não há chance de desfazer este erro.`)) { await deleteDoc(doc(dbFS, "perfis", email)); } }
 
         window.listarAuditoria = function() {
             const t = document.getElementById('buscaAuditoria').value.toLowerCase().trim(); const tb = document.getElementById('tabelaAuditoria'); tb.innerHTML = "";
