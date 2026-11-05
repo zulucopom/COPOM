@@ -61,9 +61,11 @@
         #infoFuncaoAtiva { display: inline-block; background: #2b6cb0; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-top: 15px; text-transform: uppercase; border: 1px solid #63b3ed; box-shadow: 0 2px 5px rgba(0,0,0,0.2);}
 
         .menu-items { flex-grow: 1; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
-        .menu-btn { background: none; border: none; color: #a0aec0; padding: 16px 25px; text-align: left; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; position: relative;}
+        .menu-btn { background: none; border: none; color: #a0aec0; padding: 16px 25px; text-align: left; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; position: relative; display: flex; justify-content: space-between; align-items: center;}
         .menu-btn:hover { background-color: #2d3748; color: white; padding-left: 30px;}
         .menu-btn.active { background-color: #d69e2e; color: white; border-left: 5px solid #ecc94b; box-shadow: inset 0px 0px 10px rgba(0,0,0,0.2); padding-left: 25px; font-weight: 600;}
+
+        .badge-menu-alerta { background: #e53e3e; color: white; font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 12px; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 
         .sidebar-footer { padding: 25px; border-top: 1px solid #2d3748; }
         .btn-global { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; color: white; margin-bottom: 12px; font-size: 13px; transition: all 0.2s ease;}
@@ -128,6 +130,14 @@
         .badge-aberto { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
         .badge-encerrado { background-color: #f0fdf4; color: #166534; border: 1px solid #86efac; }
 
+        /* Placar de CPAs exclusivo para o Supervisor 190 / Comando */
+        .placar-cpa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 10px; margin-top: 15px; }
+        .placar-cpa-card { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; text-align: center; cursor: pointer; transition: all 0.2s ease; }
+        .placar-cpa-card:hover { border-color: #2b6cb0; background: #ebf8ff; transform: translateY(-2px); }
+        .placar-cpa-card.ativo { background: #2b6cb0; color: white; border-color: #1a365d; }
+        .placar-cpa-card .cpa-nome { font-size: 11px; font-weight: 800; text-transform: uppercase; display: block; }
+        .placar-cpa-card .cpa-num { font-size: 20px; font-weight: 900; margin-top: 4px; display: block; }
+
         .secao-titulo { grid-column: 1 / -1; margin-top: 20px; margin-bottom: 20px; border-bottom: 2px solid #cbd5e1; color: #2d3748; padding-bottom: 10px; font-size: 20px; font-weight: 700;}
         
         .grid-supervisao { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 35px; }
@@ -172,7 +182,7 @@
         body.is-190 #card-dash-guinchos { display: none !important; }
 
         @media print {
-            .sidebar, .form-section, #buscaEfetivo, #buscaOcorrencia, #buscaGuincho, .filtros-siopm, details, .no-print, .menu-items { display: none !important; }
+            .sidebar, .form-section, #buscaEfetivo, #buscaOcorrencia, #buscaGuincho, .filtros-siopm, #painelPlacar190, details, .no-print, .menu-items { display: none !important; }
             body.printing-individual .main-content { display: none !important; }
             body.printing-individual #printIndividual { display: block !important; }
             body.printing-geral .main-content { display: none !important; }
@@ -255,15 +265,15 @@
                 <div id="infoFuncaoAtiva">AGUARDANDO POSTO...</div>
             </div>
             <div class="menu-items">
-                <button class="menu-btn active" id="btn-menu-dashboard" onclick="abrirTela('tela-dashboard', this)">📊 Painel Geral</button>
-                <button class="menu-btn" id="btn-menu-siopm" onclick="abrirTela('tela-siopm', this)">📻 SIOPM Inoperante</button>
-                <button class="menu-btn" id="btn-menu-mapa" onclick="abrirTela('tela-mapa', this)">👮 Mapa de Força</button>
-                <button class="menu-btn" id="btn-menu-ocorrencias" onclick="abrirTela('tela-ocorrencias', this)">🚨 Ocorrências de Vulto</button>
-                <button class="menu-btn" id="btn-menu-guinchos" onclick="abrirTela('tela-guinchos', this)">🚛 Guinchos e Pátio</button>
-                <button class="menu-btn" id="btn-menu-efetivo" onclick="abrirTela('tela-efetivo', this)">📘 Gestão de Efetivo</button>
+                <button class="menu-btn active" id="btn-menu-dashboard" onclick="abrirTela('tela-dashboard', this)"><span>📊 Painel Geral</span></button>
+                <button class="menu-btn" id="btn-menu-siopm" onclick="abrirTela('tela-siopm', this)"><span>📻 SIOPM Inoperante</span><span id="badgeMenuSiopm" class="badge-menu-alerta">0</span></button>
+                <button class="menu-btn" id="btn-menu-mapa" onclick="abrirTela('tela-mapa', this)"><span>👮 Mapa de Força</span></button>
+                <button class="menu-btn" id="btn-menu-ocorrencias" onclick="abrirTela('tela-ocorrencias', this)"><span>🚨 Ocorrências de Vulto</span></button>
+                <button class="menu-btn" id="btn-menu-guinchos" onclick="abrirTela('tela-guinchos', this)"><span>🚛 Guinchos e Pátio</span></button>
+                <button class="menu-btn" id="btn-menu-efetivo" onclick="abrirTela('tela-efetivo', this)"><span>📘 Gestão de Efetivo</span></button>
                 
-                <button class="menu-btn only-master" style="color:#d69e2e;" onclick="abrirTela('tela-usuarios', this)">🛡️ Gestão de Perfis</button>
-                <button class="menu-btn only-admin" style="color:#d69e2e;" onclick="abrirTela('tela-auditoria', this)">📜 Histórico de Ações</button>
+                <button class="menu-btn only-master" style="color:#d69e2e;" onclick="abrirTela('tela-usuarios', this)"><span>🛡️ Gestão de Perfis</span></button>
+                <button class="menu-btn only-admin" style="color:#d69e2e;" onclick="abrirTela('tela-auditoria', this)"><span>📜 Histórico de Ações</span></button>
             </div>
             <div class="sidebar-footer">
                 <button class="btn-global btn-backup only-admin" onclick="gerarBackupGeral()">💾 Baixar Backup Único</button>
@@ -303,37 +313,96 @@
                 </div>
             </div>
 
-            <!-- [ANCORA-TELA-190] MÓDULO 1: SIOPM INOPERANTE -->
+            <!-- ============================================================================
+                 [ANCORA-TELA-190] MÓDULO 1: SIOPM INOPERANTE + PLACAR CPA + NATUREZA M-16
+                 ============================================================================ -->
             <div id="tela-siopm" class="screen">
                 <h2>
-                    <span>Controlo de Talões (SIOPM Inoperante)</span>
+                    <span>Controle de Contingência (SIOPM Inoperante)</span>
                     <div class="no-print"><button class="btn btn-print" onclick="imprimirTela('siopm')">🖨️ Imprimir PDF</button></div>
                 </h2>
-                <div class="form-section no-print hide-leitura">
+
+                <!-- RESUMO DE TOTAIS DO 190 / CPA -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;" class="no-print">
+                    <div style="background:#f8fafc; border:1px solid #cbd5e1; border-left:5px solid #2b6cb0; padding:18px; border-radius:10px;">
+                        <span style="font-size:11px; font-weight:800; color:#718096; text-transform:uppercase;">Total de Talões (Visão Atual)</span>
+                        <div id="siopmCountTotal" style="font-size:28px; font-weight:900; color:#2d3748; margin-top:4px;">0</div>
+                    </div>
+                    <div style="background:#fff5f5; border:1px solid #feb2b2; border-left:5px solid #e53e3e; padding:18px; border-radius:10px;">
+                        <span style="font-size:11px; font-weight:800; color:#c53030; text-transform:uppercase;">Em Aberto (Pendentes)</span>
+                        <div id="siopmCountAbertos" style="font-size:28px; font-weight:900; color:#c53030; margin-top:4px;">0</div>
+                    </div>
+                    <div style="background:#f0fdf4; border:1px solid #86efac; border-left:5px solid #38a169; padding:18px; border-radius:10px;">
+                        <span style="font-size:11px; font-weight:800; color:#166534; text-transform:uppercase;">Encerrados / Baixados</span>
+                        <div id="siopmCountEncerrados" style="font-size:28px; font-weight:900; color:#166534; margin-top:4px;">0</div>
+                    </div>
+                </div>
+
+                <!-- PLACAR DE DISTRIBUIÇÃO POR CPA (VISÍVEL SOMENTE PARA SUPERVISOR 190, CHEFIA E ADMIN) -->
+                <div id="painelPlacar190" class="no-print" style="display:none; background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:20px; margin-bottom:25px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <strong style="font-size:13px; text-transform:uppercase; color:#2b6cb0; letter-spacing:0.5px;">📊 Distribuição de Talões por CPA (Exclusivo 190 / Comando — Clique para filtrar)</strong>
+                        <button class="btn" style="background:#edf2f7; color:#2d3748; padding:6px 12px; font-size:11px; border:1px solid #cbd5e1;" onclick="filtrarSiopmPorCardCpa('todos')">Mostrar Todos os CPAs</button>
+                    </div>
+                    <div id="gridPlacarCpaSiopm" class="placar-cpa-grid"></div>
+                </div>
+
+                <div class="form-section no-print hide-leitura chefia-hide-create" id="formSiopmArea">
                     <input type="hidden" id="sId">
                     <div class="form-grid">
-                        <div><label>Batalhão</label><select id="sBpm"></select></div>
-                        <div><label>Nº Talão</label><input type="text" id="sTalao" placeholder="Ex: 12345" class="mono-font"></div>
-                        <div><label>Período</label><select id="sPeriodo"><option value="Dia">Dia</option><option value="Noite">Noite</option></select></div>
                         <div>
-                            <button class="btn btn-save" id="btnSalvarSiopm" onclick="salvarSiopm()">➕ Gerar Talão</button>
-                            <button class="btn btn-restore" id="btnCancelarSiopm" onclick="cancelarEdicaoSiopm()" style="display:none; margin-top: 5px; width: 100%; padding: 10px;">Cancelar Edição</button>
+                            <label>CPA de Destino</label>
+                            <select id="sCpa" onchange="aoMudarCpaSiopm()"></select>
+                        </div>
+                        <div>
+                            <label>Batalhão (BPM Destino)</label>
+                            <select id="sBpm" onchange="aoMudarBpmSiopm()"></select>
+                        </div>
+                        <div>
+                            <label>Nº Talão Contingência</label>
+                            <input type="text" id="sTalao" placeholder="Ex: 12345" class="mono-font">
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label>Natureza da Ocorrência (Cód. M-16)</label>
+                            <input type="text" id="sNatureza" list="listaNaturezasM16" placeholder="Digite o código (ex: B04) ou nome (ex: ROUBO)...">
+                            <datalist id="listaNaturezasM16"></datalist>
+                        </div>
+                        <div>
+                            <label>Período</label>
+                            <select id="sPeriodo"><option value="Dia">Dia</option><option value="Noite">Noite</option></select>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-save" id="btnSalvarSiopm" onclick="salvarSiopm()">➕ Enviar Talão p/ CPA</button>
+                            <button class="btn btn-restore" id="btnCancelarSiopm" onclick="cancelarEdicaoSiopm()" style="display:none; width:auto; min-width:140px;">Cancelar</button>
                         </div>
                     </div>
                 </div>
                 
-                <div class="filtros-siopm no-print" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 25px; display: flex; gap: 15px; align-items: center;">
-                    <strong style="color: #4a5568; font-size: 14px;">🔍 Filtros Rápidos:</strong>
-                    <select id="filtroSiopmBpm" onchange="listarSiopm()" style="width: 200px; margin-bottom: 0;"></select>
-                    <select id="filtroSiopmStatus" onchange="listarSiopm()" style="width: 200px; margin-bottom: 0;">
-                        <option value="todos">Todos os Status</option><option value="Aberto">Abertos</option><option value="Encerrado">Encerrados</option>
+                <div class="filtros-siopm no-print" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 25px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <strong style="color: #4a5568; font-size: 14px;">🔍 Filtros:</strong>
+                    <select id="filtroSiopmCpa" onchange="listarSiopm()" style="width: 210px; margin-bottom: 0; display:none;"></select>
+                    <select id="filtroSiopmBpm" onchange="listarSiopm()" style="width: 190px; margin-bottom: 0;"></select>
+                    <select id="filtroSiopmStatus" onchange="listarSiopm()" style="width: 190px; margin-bottom: 0;">
+                        <option value="todos">Todos os Status</option><option value="Aberto">Apenas Abertos</option><option value="Encerrado">Apenas Encerrados</option>
                     </select>
+                    <input type="text" id="buscaSiopmTexto" onkeyup="listarSiopm()" placeholder="🔎 Buscar talão ou natureza..." style="flex:1; min-width:200px; margin-bottom:0; padding:12px 16px; border-radius:25px;">
                 </div>
                 
-                <p style="color: #718096; font-size: 14px; margin-top: -5px; font-weight: 600;">⚠️ Mostrando apenas os talões de HOJE e os talões de dias anteriores que ainda estão em aberto.</p>
+                <p style="color: #718096; font-size: 14px; margin-top: -5px; font-weight: 600;">⚡ Sincronização Direta: Os talões gerados pelo 190 caem instantaneamente na tela do Supervisor do CPA correspondente.</p>
                 
                 <table>
-                    <thead><tr><th style="width: 110px;">Data</th><th style="width: 130px;">Batalhão</th><th style="width: 120px;">Nº Talão</th><th style="width: 90px;">Período</th><th>Desfecho</th><th>Status</th><th class="no-print" style="width: 160px;">Ações</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th style="width: 105px;">Data</th>
+                            <th style="width: 140px;">CPA / BPM Destino</th>
+                            <th style="width: 110px;">Nº Talão</th>
+                            <th>Natureza (M-16)</th>
+                            <th style="width: 80px;">Período</th>
+                            <th>Desfecho</th>
+                            <th style="width: 100px;">Status</th>
+                            <th class="no-print" style="width: 170px;">Ações</th>
+                        </tr>
+                    </thead>
                     <tbody id="tabelaSiopm"></tbody>
                 </table>
             </div>
@@ -672,10 +741,76 @@
             ]
         };
 
+        // TABELA OFICIAL DE NATUREZAS DE OCORRÊNCIA (M-16 PM)
+        const NATUREZAS_M16 = [
+            "A01 - HOMICÍDIO CULPOSO", "A02 - HOMICÍDIO DOLOSO", "A03 - HOMICÍDIO TENTATIVA", "A04 - ABORTO",
+            "A05 - AGRESSÃO", "A06 - INFANTICÍDIO", "A07 - PERICLITAÇÃO DE VIDA", "A08 - ABANDONO DE INCAPAZ",
+            "A09 - OMISSÃO DE SOCORRO", "A10 - AMEAÇA", "A11 - SEQUESTRO E CÁRCERE PRIVADO", "A12 - VIOLAÇÃO DE DOMICÍLIO",
+            "A13 - MAUS TRATOS A PESSOA", "A14 - RIXA", "A15 - CALÚNIA", "A16 - DIFAMAÇÃO", "A17 - INJÚRIA",
+            "A18 - CONSTRANGIMENTO ILEGAL", "A19 - RIXA/BRIGA GENERALIZADA", "A20 - LESÃO CORPORAL / AGRESSÃO CULPOSA",
+            "A21 - LESÃO CORPORAL / AGRESSÃO DOLOSA", "A22 - VENDA/ENTREGA DE ARMA BRANCA", "A23 - CONDUTA INCONVENIENTE",
+            "A24 - REDUÇÃO À CONDIÇÃO ANÁLOGA DE ESCRAVO", "A25 - TRÁFICO DE PESSOAS", "A26 - ASSÉDIO SEXUAL",
+            "A27 - TORTURA", "A28 - DESAPARECIMENTO DE PESSOA", "A29 - LOCALIZAÇÃO DE PESSOA PERDIDA",
+            "A30 - ENCONTRO DE CADÁVER", "A31 - SUICÍDIO", "A32 - CONDUTAS DISCRIMINATÓRIAS",
+            "A98 - VIOLÊNCIA DOMÉSTICA", "A99 - MEDIDAS PROTETIVAS (APLICATIVO)",
+            "B01 - FURTO", "B02 - FURTO TENTATIVA", "B03 - ROUBO TENTATIVA", "B04 - ROUBO", "B05 - EXTORSÃO",
+            "B06 - POSSE / INVASÃO DE PROPRIEDADE", "B07 - DANO MATERIAL", "B08 - APROPRIAÇÃO INDÉBITA",
+            "B09 - ESTELIONATO / FRAUDE", "B10 - RECEPTAÇÃO", "B11 - LATROCÍNIO", "B12 - ALARME DISPARADO",
+            "C01 - PERTURBAÇÃO DE SOSSEGO PÚBLICO", "C02 - CONDUTA INCONVENIENTE", "C03 - EMBRIAGUEZ",
+            "C04 - DESINTELIGÊNCIA", "C05 - AVERIGUAÇÃO DE ATITUDE SUSPEITA", "C06 - PERTURBAÇÃO DE CERIMÔNIA FUNERÁRIA",
+            "C07 - VIOLAÇÃO DE SEPULTURA", "C08 - DESTRUIÇÃO/SUBTRAÇÃO/OCULTAÇÃO DE CADÁVER", "C09 - VILIPÊNDIO DE CADÁVER",
+            "C99 - PANCADÃO / BAILE FUNK / ESQUENTA",
+            "D01 - ESTUPRO", "D02 - ESTUPRO TENTATIVA", "D03 - ATO OBSCENO", "D04 - ESCRITA OU OBJETO OBSCENO",
+            "D06 - CORRUPÇÃO DE MENORES", "D08 - EXPLORAÇÃO DE LENOCÍNIO", "D09 - JOGOS DE AZAR", "D10 - VADIAGEM",
+            "D11 - MENDICÂNCIA", "D13 - IMPORTUNAÇÃO OFENSIVA AO PUDOR",
+            "E01 - PECULATO", "E02 - CONCUSSÃO", "E03 - CORRUPÇÃO PASSIVA", "E04 - PREVARICAÇÃO",
+            "E05 - VIOLÊNCIA ARBITRÁRIA", "E06 - USURPAÇÃO DE FUNÇÃO PÚBLICA", "E07 - RESISTÊNCIA",
+            "E08 - DESOBEDIÊNCIA", "E09 - DESACATO", "E10 - CONTRABANDO / DESCAMINHO", "E11 - ABUSO DE AUTORIDADE",
+            "E12 - CORRUPÇÃO ATIVA", "E13 - EXERCÍCIO ARBITRÁRIO DAS PRÓPRIAS RAZÕES", "E14 - NUMEC",
+            "E99 - POLICIAL EM PERIGO (APLICATIVO)",
+            "F01 - OCORRÊNCIA COM ENTORPECENTE", "F02 - USO DE ENTORPECENTE",
+            "G01 - OCORRÊNCIAS COM PRESO", "G02 - COMUNICAÇÃO FALSA DE CRIME / TROTE",
+            "G03 - ESCOLTA / TRANSPORTE / GUARDA DE PRESOS", "G04 - DESCUMPRIMENTO DE MEDIDA CAUTELAR",
+            "H01 - GREVE", "H02 - PIQUETE", "H03 - TUMULTO", "H04 - PASSEATA", "H05 - SAQUE / ARRASTÃO", "H06 - MANIFESTAÇÃO PÚBLICA",
+            "I01 - CAÇA", "I02 - PESCA", "I03 - DESMATAMENTO", "I14 - MAUS TRATOS A ANIMAIS", "I99 - OUTRAS OCORRÊNCIAS AMBIENTAIS",
+            "J01 - EXERCÍCIO ILEGAL DE PROFISSÃO", "J02 - DETENÇÃO DE SUSPEITO", "J03 - PORTE ILEGAL DE ARMA",
+            "J04 - SUBVERSÃO / TERRORISMO", "J05 - DISPARO DE ARMA DE FOGO", "J06 - FALSIFICAÇÃO", "J07 - PERIGO DE DESASTRE FERROVIÁRIO",
+            "J08 - APREENSÃO DE OBJETO", "J09 - ASSOCIAÇÃO CRIMINOSA", "J10 - SOLTURA DE BALÕES / FOGOS", "J11 - CRIME ELEITORAL",
+            "L01 - VEÍCULO (LOCALIZAÇÃO/APREENSÃO)", "L04 - CONGESTIONAMENTO", "L05 - INFRAÇÕES E CRIMES DE TRÂNSITO",
+            "L06 - INTERDIÇÃO DE VIA PÚBLICA", "L07 - ATROPELAMENTO", "L08 - ACIDENTE DE TRÂNSITO COM VÍTIMA",
+            "L09 - ACIDENTE DE TRÂNSITO SEM VÍTIMA", "L10 - ACIDENTE DE TRÂNSITO COM PM", "L12 - ACIDENTE DE TRÂNSITO COM MOTO",
+            "L13 - DISPUTA DE CORRIDA / RACHA", "L14 - REMOÇÃO DE BARRICADAS EM VIA PÚBLICA",
+            "M01 - OCORRÊNCIA COM PESSOA (AUXÍLIO)", "M04 - INSETO AGRESSIVO", "M06 - INGESTÃO/INJEÇÃO/INALAÇÃO DE SUBSTÂNCIA",
+            "M10 - DESMORONAMENTO", "M11 - AUXÍLIO À GESTANTE", "M18 - OUTRA OC. COM PATRIMÔNIO",
+            "M19 - PESSOA EM LOCAL DE RISCO", "M22 - EMERGÊNCIA CLÍNICA", "M23 - OCORRÊNCIA POLICIAL CORONAVÍRUS",
+            "N01 - INCÊNDIO", "N05 - EXPLOSÃO", "N08 - VAZAMENTO", "N13 - QUEDA DE ÁRVORE", "N18 - SITUAÇÃO DE RISCO", "N26 - CAPTURA DE ANIMAL",
+            "TTT - OCORRÊNCIA DE TESTE", "Z01 - APOIO A ÓRGÃOS EXTERNOS", "Z99 - OUTRAS OCORRÊNCIAS / OP. SERVIR E PROTEGER"
+        ];
+
         window.obterTodasUnidadesMapeadas = function() {
             const setUnidades = new Set();
             Object.values(MAPA_JURISDICAO_CPA).forEach(lista => lista.forEach(u => setUnidades.add(u)));
             return Array.from(setUnidades);
+        };
+
+        window.descobrirCpaPorBpm = function(bpm) {
+            if (!bpm) return "OUTROS";
+            for (const [cpa, listaBpms] of Object.entries(MAPA_JURISDICAO_CPA)) {
+                if (listaBpms.includes(bpm)) return cpa;
+            }
+            return "OUTROS";
+        };
+
+        window.normalizarTexto = function(str) {
+            return String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+        };
+
+        window.localizarMotoristaPorNome = function(nomeDigitado) {
+            const alvo = window.normalizarTexto(nomeDigitado);
+            if (!alvo) return null;
+            const lista = window.getDB().motoristas || [];
+            return lista.find(x => window.normalizarTexto(x.nome) === alvo) ||
+                   lista.find(x => window.normalizarTexto(x.nome).includes(alvo) || alvo.includes(window.normalizarTexto(x.nome)));
         };
 
         // Sanitizador HTML contra XSS
@@ -685,7 +820,7 @@
             return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
         };
 
-        // Sanitizador de argumentos JavaScript dentro de atributos HTML (onclick/onchange)
+        // Sanitizador de argumentos JavaScript dentro de atributos HTML
         window.eAttr = function(str) {
             if (str === null || str === undefined) return '';
             return String(str)
@@ -696,7 +831,6 @@
                 .replace(/>/g, '&gt;');
         };
 
-        // Trava de Segurança Backend/Client contra bypass de perfil "leitura" ou "pendente"
         window.bloquearSeLeitura = function() {
             if (window.userStatus !== 'aprovado' || window.postoAtivo === "Aguardando Aprovação" || !window.postoAtivo) {
                 alert("🚫 Alerta de Segurança: Sessão não habilitada para escrita.");
@@ -752,6 +886,10 @@
         }
 
         window.temAcessoTotal = function() { return window.userRole === 'master' || window.userRole === 'admin'; };
+
+        window.ehVisaoGlobalSiopm = function() {
+            return window.temAcessoTotal() || window.postoAtivo === 'Chefia' || window.postoAtivo === 'Supervisor 190';
+        };
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -903,6 +1041,11 @@
 
             window.inicializarCamposDinamicos();
 
+            // Se for Supervisor 190, abre diretamente a tela principal dele (SIOPM Inoperante)
+            if (window.postoAtivo === 'Supervisor 190') {
+                window.abrirTela('tela-siopm', document.getElementById('btn-menu-siopm'));
+            }
+
             resetarTimer(); iniciarSincronizacaoFirebase(); setTimeout(() => window.setOnlineStatus(true), 2000);
         }
 
@@ -980,15 +1123,72 @@
             todasUnidades.forEach(u => { bpmOptionsGlobal += `<option value="${window.eH(u)}">${window.eH(u)}</option>`; });
             bpmOptionsGlobal += `<option value="OUTROS">OUTROS...</option>`;
 
-            let fBpm = `<option value="todos">Todos</option>`;
-            unidadesPosto.forEach(u => { fBpm += `<option value="${window.eH(u)}">${window.eH(u)}</option>`; });
-
             document.getElementById('gBpm').innerHTML = bpmOptionsRestrito;
             document.getElementById('oBpm').innerHTML = bpmOptionsRestrito;
-            document.getElementById('sBpm').innerHTML = bpmOptionsRestrito;
             document.getElementById('eUnidade').innerHTML = bpmOptionsGlobal;
-            document.getElementById('filtroSiopmBpm').innerHTML = fBpm;
+
+            // Popula Datalist de Naturezas M-16
+            const dlNat = document.getElementById('listaNaturezasM16');
+            if (dlNat && dlNat.innerHTML === "") {
+                let natHtml = "";
+                NATUREZAS_M16.forEach(n => { natHtml += `<option value="${window.eH(n)}">`; });
+                dlNat.innerHTML = natHtml;
+            }
+
+            // Configura selects de CPA e BPM do Módulo SIOPM Inoperante
+            const selSCpa = document.getElementById('sCpa');
+            const selFiltroCpa = document.getElementById('filtroSiopmCpa');
+            const painelPlacar = document.getElementById('painelPlacar190');
+
+            if (window.ehVisaoGlobalSiopm()) {
+                let cpaOpts = `<option value="">Todos / Selecionar CPA...</option>`;
+                let fCpaOpts = `<option value="todos">Todos os CPAs</option>`;
+                Object.keys(MAPA_JURISDICAO_CPA).forEach(cpa => {
+                    const labelCurto = cpa.replace('Supervisor ', '');
+                    cpaOpts += `<option value="${window.eH(cpa)}">${window.eH(labelCurto)}</option>`;
+                    fCpaOpts += `<option value="${window.eH(cpa)}">${window.eH(labelCurto)}</option>`;
+                });
+                selSCpa.innerHTML = cpaOpts;
+                selSCpa.disabled = false;
+                selFiltroCpa.innerHTML = fCpaOpts;
+                selFiltroCpa.style.display = 'inline-block';
+                if (painelPlacar) painelPlacar.style.display = 'block';
+            } else {
+                const cpaAtual = MAPA_JURISDICAO_CPA[window.postoAtivo] ? window.postoAtivo : "";
+                selSCpa.innerHTML = `<option value="${window.eH(cpaAtual)}">${window.eH(cpaAtual.replace('Supervisor ', '') || 'Geral')}</option>`;
+                selSCpa.value = cpaAtual;
+                selSCpa.disabled = true;
+                selFiltroCpa.style.display = 'none';
+                if (painelPlacar) painelPlacar.style.display = 'none';
+            }
+
+            window.aoMudarCpaSiopm();
         }
+
+        window.aoMudarCpaSiopm = function() {
+            const cpaSelecionado = document.getElementById('sCpa').value;
+            const todasUnidades = window.obterTodasUnidadesMapeadas();
+            const listaBpms = MAPA_JURISDICAO_CPA[cpaSelecionado] || (MAPA_JURISDICAO_CPA[window.postoAtivo] || todasUnidades);
+
+            let sBpmHtml = `<option value="">Selecione o BPM...</option>`;
+            let fBpmHtml = `<option value="todos">Todos os BPMs</option>`;
+            listaBpms.forEach(u => {
+                sBpmHtml += `<option value="${window.eH(u)}">${window.eH(u)}</option>`;
+                fBpmHtml += `<option value="${window.eH(u)}">${window.eH(u)}</option>`;
+            });
+            document.getElementById('sBpm').innerHTML = sBpmHtml;
+            document.getElementById('filtroSiopmBpm').innerHTML = fBpmHtml;
+        };
+
+        window.aoMudarBpmSiopm = function() {
+            const bpm = document.getElementById('sBpm').value;
+            if (!bpm) return;
+            const cpa = window.descobrirCpaPorBpm(bpm);
+            const selSCpa = document.getElementById('sCpa');
+            if (cpa && cpa !== "OUTROS" && selSCpa && !selSCpa.disabled) {
+                selSCpa.value = cpa;
+            }
+        };
 
         window.verificarUnidadeOutros = function() { const v = document.getElementById('eUnidade').value; document.getElementById('eUnidadeOutro').style.display = (v === 'OUTROS') ? 'block' : 'none'; }
         window.verificarBpmOcorrenciaOutros = function() { const v = document.getElementById('oBpm').value; document.getElementById('oBpmOutro').style.display = (v === 'OUTROS') ? 'block' : 'none'; }
@@ -1067,13 +1267,17 @@
                     mHj = mHj.filter(x => x.criadoPor === window.postoAtivo || x.criadoPor === window.currentUserEmail);
                     guinchosTurno = guinchosTurno.filter(g => g.criadoPor === window.postoAtivo || g.criadoPor === window.currentUserEmail);
                     oco = oco.filter(x => x.criadoPor === window.postoAtivo || x.criadoPor === window.currentUserEmail);
+                    if (window.postoAtivo !== 'Supervisor 190') {
+                        const bpmsMeuCpa = MAPA_JURISDICAO_CPA[window.postoAtivo] || [];
+                        sio = sio.filter(s => s.cpaDestino === window.postoAtivo || bpmsMeuCpa.includes(s.bpm) || s.criadoPor === window.postoAtivo);
+                    }
                 }
 
                 window.registrarAuditoria('Impressão de Relatório', `Datas extraídas: ${sOn} e ${sHj}`);
 
                 let h1Titulo = window.temAcessoTotal() || window.postoAtivo === 'Chefia' ? "Relatório Oficial de Vulto e Operação" : "Resumo Geral Diário do Operador";
 
-                let html = `<div style="font-family:sans-serif; color:#2d3748; padding:10px;"><div class="print-header"><div><h1 style="margin:0; font-size:24px;">${h1Titulo}</h1><h2 style="margin:5px 0 0 0; color:#718096; font-size:14px;">COPOM Supervisores</h2></div><div style="text-align:right;"><p style="font-size:14px; font-weight:bold; background:#edf2f7; padding:8px; border-radius: 4px;">Referência: ${sOn} e ${sHj}</p></div></div>`;
+                let html = `<div style="font-family:sans-serif; color:#2d3748; padding:10px;"><div class="print-header"><div><h1 style="margin:0; font-size:24px;">${h1Titulo}</h1><h2 style="margin:5px 0 0 0; color:#718096; font-size:14px;">COPOM Supervisores (${window.eH(window.postoAtivo)})</h2></div><div style="text-align:right;"><p style="font-size:14px; font-weight:bold; background:#edf2f7; padding:8px; border-radius: 4px;">Referência: ${sOn} e ${sHj}</p></div></div>`;
                 
                 html += `<div style="margin-bottom:30px;"><h3 class="print-section-title print-title-mapa">1. EFETIVO ESCALADO E SUPERVISÃO</h3>`;
                 if (mOn.length===0 && mHj.length===0) html += `<p>Nenhum militar lançado em escala neste período.</p>`;
@@ -1106,8 +1310,10 @@
                 if (guinchosTurno.length===0) html += `<p>Nenhum acionamento de guincho.</p>`; else {
                     html += `<table class="print-table"><thead><tr><th>Data/Hora</th><th>Motorista / CPF</th><th>Placa</th><th>BPM / Op.</th><th>Talão</th><th>Recolha / Endereço / Pátio</th><th>Status</th></tr></thead><tbody>`;
                     guinchosTurno.forEach(g => {
+                        let motCad = window.localizarMotoristaPorNome(g.motNome);
+                        let cpfVal = g.motCpf || (motCad ? motCad.cpf : '');
                         let infoOp = g.operacaoTransito ? `<br><small><strong>Op:</strong> ${window.eH(g.nomeOperacao)} (${g.quantidadeGuinchos || 1}x)</small>` : '';
-                        let infoCpf = g.motCpf ? `<br><small>CPF: ${window.eH(g.motCpf)}</small>` : '';
+                        let infoCpf = cpfVal ? `<br><small>CPF: ${window.eH(cpfVal)}</small>` : '';
                         let infoRecolha = `${window.eH(g.tipoRecolha || 'Local da Abordagem')} - ${window.eH(g.enderecoRecolha || '-')} (Pátio: ${window.eH(g.patio)})`;
                         html += `<tr><td>${window.eH(g.dataShow)}</td><td><strong>${window.eH(g.motNome)}</strong>${infoCpf}</td><td>${window.eH(g.placa)}</td><td>${window.eH(g.bpm)}${infoOp}</td><td>${window.eH(g.talao)}</td><td>${infoRecolha}</td><td><strong>${g.chegou?"✅ Pátio":"🕒 Trânsito"}</strong></td></tr>`;
                     });
@@ -1115,7 +1321,14 @@
                 } html += `</div>`;
 
                 html += `<div style="margin-bottom:30px;"><h3 class="print-section-title print-title-siopm">4. SISTEMA SIOPM (INOPERANTE)</h3>`;
-                if (sio.length===0) html += `<p>Nenhum talão de inoperância gerado.</p>`; else { html += `<table class="print-table"><thead><tr><th>Data</th><th>BPM</th><th>Talão Fisico</th><th>Período</th><th>Desfecho</th><th>Status Final</th></tr></thead><tbody>`; sio.forEach(s => html += `<tr><td>${window.eH(s.data)}</td><td>${window.eH(s.bpm)}</td><td>${window.eH(s.talao)}</td><td>${window.eH(s.periodo)}</td><td style="color:#718096; font-style:italic;">${window.eH(s.desfecho||'-')}</td><td><strong>${window.eH(s.status)}</strong></td></tr>`); html += `</tbody></table>`; } html += `</div>`;
+                if (sio.length===0) html += `<p>Nenhum talão de inoperância gerado.</p>`; else {
+                    html += `<table class="print-table"><thead><tr><th>Data</th><th>CPA / BPM</th><th>Talão</th><th>Natureza</th><th>Período</th><th>Desfecho</th><th>Status</th></tr></thead><tbody>`;
+                    sio.forEach(s => {
+                        let cpaLabel = (s.cpaDestino || window.descobrirCpaPorBpm(s.bpm)).replace('Supervisor ', '');
+                        html += `<tr><td>${window.eH(s.data)}</td><td><strong>${window.eH(cpaLabel)}</strong> - ${window.eH(s.bpm)}</td><td>${window.eH(s.talao)}</td><td>${window.eH(s.natureza || '-')}</td><td>${window.eH(s.periodo)}</td><td style="color:#718096; font-style:italic;">${window.eH(s.desfecho||'-')}</td><td><strong>${window.eH(s.status)}</strong></td></tr>`;
+                    });
+                    html += `</tbody></table>`;
+                } html += `</div>`;
 
                 html += `</div>`;
 
@@ -1185,8 +1398,26 @@
             }
         }
 
+        window.atualizarAlertaMenuSiopm = function() {
+            const badge = document.getElementById('badgeMenuSiopm');
+            if (!badge) return;
+            const bpmsMeuCpa = MAPA_JURISDICAO_CPA[window.postoAtivo] || [];
+            const abertos = (window.getDB().siopm || []).filter(s => {
+                if (s.status !== 'Aberto') return false;
+                if (window.ehVisaoGlobalSiopm()) return true;
+                const cpaItem = s.cpaDestino || window.descobrirCpaPorBpm(s.bpm);
+                return cpaItem === window.postoAtivo || bpmsMeuCpa.includes(s.bpm) || s.criadoPor === window.postoAtivo;
+            });
+            if (abertos.length > 0) {
+                badge.innerText = abertos.length;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        };
+
         window.atualizarTudo = function() {
-            window.atualizarContadorEfetivo(); window.atualizarDatalistMapa(); window.atualizarFiltroAdminMapa();
+            window.atualizarContadorEfetivo(); window.atualizarDatalistMapa(); window.atualizarFiltroAdminMapa(); window.atualizarAlertaMenuSiopm();
             if(document.getElementById('tela-mapa').classList.contains('active')) window.carregarMapaDoDia();
             if(document.getElementById('tela-ocorrencias').classList.contains('active')) window.listarOcorrencias();
             if(document.getElementById('tela-guinchos').classList.contains('active')) { window.carregarSelectMotoristas(); window.listarGuinchos(); }
@@ -1196,7 +1427,7 @@
             window.atualizarDashboard();
         }
 
-        window.abrirTela = function(idTela, btn) { document.querySelectorAll('.screen').forEach(t => t.classList.remove('active')); document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active')); document.getElementById(idTela).classList.add('active'); btn.classList.add('active'); window.atualizarTudo(); }
+        window.abrirTela = function(idTela, btn) { document.querySelectorAll('.screen').forEach(t => t.classList.remove('active')); document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active')); document.getElementById(idTela).classList.add('active'); if(btn) btn.classList.add('active'); window.atualizarTudo(); }
         window.atualizarContadorEfetivo = function() { document.getElementById('contadorEfetivo').innerText = `${window.getDB().efetivo.length} policiais na base oficial`; }
 
         window.salvarEfetivo = async function() {
@@ -1535,7 +1766,7 @@
             if(!n || !b || !enderecoRecolha) return alert("Insira os dados obrigatórios: Motorista, BPM Solicitante e Endereço da Recolha."); 
             if(flagOpTransito && !nomeOperacao) return alert("Informe o Nome da Operação de Trânsito.");
 
-            let mot = window.getDB().motoristas.find(x => x.nome.toLowerCase() === n.toLowerCase()); 
+            let mot = window.localizarMotoristaPorNome(n); 
             let id = editId ? Number(editId) : window.gId();
             let ant = editId ? window.getDB().guinchos.find(x => String(x.id) === String(id)) : null;
 
@@ -1658,11 +1889,9 @@
             const limite2Dias = Date.now() - (2 * 24 * 60 * 60 * 1000);
             guinchosGeral = guinchosGeral.filter(g => g.id >= limite2Dias);
 
-            // Filtro de Status (Em Rota vs Pátio)
             if(fStatus === 'acionados') guinchosGeral = guinchosGeral.filter(g => !g.chegou);
             if(fStatus === 'finalizados') guinchosGeral = guinchosGeral.filter(g => g.chegou);
 
-            // Filtro de Tipo (Apenas Guinchos Comuns vs Apenas Operações de Trânsito)
             if(fTipo === 'comuns') guinchosGeral = guinchosGeral.filter(g => !g.operacaoTransito);
             if(fTipo === 'operacoes') guinchosGeral = guinchosGeral.filter(g => Boolean(g.operacaoTransito));
 
@@ -1686,18 +1915,12 @@
                 let btnEdit = podeEditar ? `<button class="btn btn-edit hide-leitura" onclick="prepararEdicaoGuincho('${window.eAttr(g.id)}')" style="border-radius:6px; padding: 8px 12px;" title="Editar lançamento">✏️</button>` : '';
                 let btnDel = podeEditar ? `<button class="btn btn-del hide-leitura" onclick="excluirItem('guinchos', '${window.eAttr(g.id)}')" style="border-radius:6px; padding: 8px 12px;" title="Excluir lançamento">🗑️</button>` : '';
                 
-                // Busca o CPF salvo no registro ou faz fallback automático no cadastro de motoristas
-                let cpfExibir = g.motCpf;
-                if(!cpfExibir && g.motNome) {
-                    let motCad = window.getDB().motoristas.find(x => x.nome.toLowerCase() === g.motNome.toLowerCase());
-                    if(motCad && motCad.cpf) cpfExibir = motCad.cpf;
-                }
+                let motCad = window.localizarMotoristaPorNome(g.motNome);
+                let cpfExibir = g.motCpf || (motCad ? motCad.cpf : '');
                 let htmlCpf = `<div class="mono-font" style="font-size:12px; color:#4a5568; margin-top:4px;">CPF: <strong>${window.eH(cpfExibir || 'Não informado')}</strong></div>`;
 
-                // Tag discreta abaixo do BPM apenas para sinalizar que pertence a uma Operação
                 let tagMiniOp = g.operacaoTransito ? `<div style="margin-top:4px;"><span style="background:#fefcbf; color:#975a16; border:1px solid #fbd38d; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">🚨 OP. TRÂNSITO</span></div>` : '';
 
-                // Conteúdo oculto que só aparece ao clicar em "👁️ Ver Detalhes"
                 let blocoOpExpandido = g.operacaoTransito ? `
                     <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #cbd5e1; color:#975a16;">
                         <strong>🚨 Operação:</strong> ${window.eH(g.nomeOperacao || '-')} <br>
@@ -1739,65 +1962,199 @@
             if(g) { g.chegou = !g.chegou; await setDoc(doc(dbFS, "guinchos", String(id)), g); }
         }
 
+        // ============================================================================
+        // [ANCORA-TELA-190] LÓGICA DO SIOPM INOPERANTE + PLACAR CPA + ROTEAMENTO DIRETO
+        // ============================================================================
+        window.filtrarSiopmPorCardCpa = function(cpa) {
+            const selCpa = document.getElementById('filtroSiopmCpa');
+            if (selCpa) {
+                selCpa.value = cpa;
+                window.listarSiopm();
+            }
+        };
+
         window.salvarSiopm = async function() { 
             if(window.bloquearSeLeitura()) return;
-            const id = document.getElementById('sId').value ? Number(document.getElementById('sId').value) : window.gId(); 
-            const b = document.getElementById('sBpm').value; const t = document.getElementById('sTalao').value; const p = document.getElementById('sPeriodo').value; 
-            if(!b || !t || !p) return alert("Obrigatório a inserção dos dados vitais da contingência."); 
+            if(window.postoAtivo === "Chefia" && !document.getElementById('sId').value) return alert("Perfil de Chefia realiza apenas supervisão e edição de talões existentes.");
 
-            const existe = window.sgidb.siopm.find(s => s.data === window.getDataHoje() && s.periodo === p && s.talao === t && String(s.id) !== String(id));
-            if(existe) return alert(`🚫 ADVERTÊNCIA DE DUPLICIDADE: Este talão já foi averbado hoje pela mesa: ${existe.criadoPor}.`);
+            const id = document.getElementById('sId').value ? Number(document.getElementById('sId').value) : window.gId(); 
+            const b = document.getElementById('sBpm').value;
+            const t = document.getElementById('sTalao').value.trim();
+            const nat = document.getElementById('sNatureza').value.trim().toUpperCase();
+            const p = document.getElementById('sPeriodo').value; 
+            const cpaDestino = document.getElementById('sCpa').value || window.descobrirCpaPorBpm(b);
+
+            if(!b || !t || !nat || !p) return alert("Preencha todos os dados vitais da contingência: BPM, Nº do Talão, Natureza (M-16) e Período."); 
+
+            const existe = window.sgidb.siopm.find(s => s.data === window.getDataHoje() && s.periodo === p && s.talao === t && s.bpm === b && String(s.id) !== String(id));
+            if(existe) return alert(`🚫 ADVERTÊNCIA DE DUPLICIDADE: O talão ${t} (${b}) já foi lançado hoje pela mesa: ${existe.criadoPor}.`);
             
-            let obj = { id: id, bpm: b, talao: t, periodo: p }; 
-            if(!document.getElementById('sId').value) { obj.data = window.getDataHoje(); obj.status = 'Aberto'; obj.desfecho = ''; obj.criadoPor = window.postoAtivo || window.currentUserEmail; } 
-            else { let ant = window.getDB().siopm.find(s => String(s.id) === String(id)); obj.data = ant.data; obj.status = ant.status; obj.desfecho = ant.desfecho; obj.criadoPor = ant.criadoPor; } 
+            let obj = { id: id, cpaDestino: cpaDestino, bpm: b, talao: t, natureza: nat, periodo: p }; 
+            if(!document.getElementById('sId').value) {
+                obj.data = window.getDataHoje();
+                obj.status = 'Aberto';
+                obj.desfecho = '';
+                obj.criadoPor = window.postoAtivo || window.currentUserEmail;
+            } else {
+                let ant = window.getDB().siopm.find(s => String(s.id) === String(id));
+                obj.data = ant ? ant.data : window.getDataHoje();
+                obj.status = ant ? ant.status : 'Aberto';
+                obj.desfecho = ant ? ant.desfecho : '';
+                obj.criadoPor = ant ? ant.criadoPor : window.postoAtivo;
+            } 
             
-            try { await setDoc(doc(dbFS, "siopm", String(id)), obj); window.cancelarEdicaoSiopm(); } catch (error) { alert("🚫 O servidor central recusou a permissão."); }
+            const btn = document.getElementById('btnSalvarSiopm');
+            if (btn) btn.disabled = true;
+            try {
+                await setDoc(doc(dbFS, "siopm", String(id)), obj);
+                window.registrarAuditoria('Gerou Talão Contingência SIOPM', `Talão: ${t} | Destino: ${cpaDestino} (${b}) | Nat: ${nat}`);
+                window.cancelarEdicaoSiopm();
+            } catch (error) { alert("🚫 O servidor central recusou a permissão."); }
+            finally { if (btn) btn.disabled = false; }
         }
 
         window.encerrarOuReabrirSiopm = async function(id) { 
             if(window.bloquearSeLeitura()) return;
             let i = window.getDB().siopm.find(x => String(x.id) === String(id)); if(!i) return;
-            const podeAlterar = (window.temAcessoTotal() || window.postoAtivo === 'Chefia' || i.criadoPor === window.postoAtivo || i.criadoPor === window.currentUserEmail);
-            if(!podeAlterar) return alert(`🚫 ACESSO RESTRITO: Arquivo blindado pelo oficial lançador (${i.criadoPor}).`);
+            const cpaDoTalao = i.cpaDestino || window.descobrirCpaPorBpm(i.bpm);
+            const podeAlterar = (window.ehVisaoGlobalSiopm() || cpaDoTalao === window.postoAtivo || i.criadoPor === window.postoAtivo || i.criadoPor === window.currentUserEmail);
+            if(!podeAlterar) return alert(`🚫 ACESSO RESTRITO: Apenas o 190 ou o Supervisor do ${cpaDoTalao} podem dar baixa neste talão.`);
 
             if(i.status === 'Aberto') { 
-                let desfechoFinal = ""; let opcao = prompt("Comando Central de Encerramento\n\n1 - Ocorrência resolvida com Novo Talão SIOPM\n2 - Ocorrência redirecionada para outra Fração Tática");
-                if(opcao === "1") { let numSiopm = prompt("Nº do novo Talão de Fechamento:"); if(!numSiopm) return; desfechoFinal = `T. SIOPM: ${numSiopm} do ${i.bpm}`; } 
+                let desfechoFinal = ""; let opcao = prompt("Comando Central de Encerramento\n\n1 - Ocorrência resolvida com Novo Talão SIOPM\n2 - Ocorrência redirecionada para outra Fração Tática\n3 - Encerrada no local / Sem novidade");
+                if(opcao === "1") { let numSiopm = prompt("Nº do novo Talão de Fechamento:"); if(!numSiopm) return; desfechoFinal = `T. SIOPM: ${numSiopm} (${i.bpm})`; } 
                 else if (opcao === "2") { let bpmRed = prompt("Informe a Fração ou BPM redirecionado:"); if(!bpmRed) return; desfechoFinal = `Redirecionado p/ ${bpmRed}`; } 
+                else if (opcao === "3") { desfechoFinal = `Encerrado pelo ${window.postoAtivo}`; }
                 else { return; }
 
-                i.status = 'Encerrado'; i.desfecho = desfechoFinal; await setDoc(doc(dbFS, "siopm", String(id)), i); window.registrarAuditoria('Deu Baixa no SIOPM Inoperante', `Talão Antigo: ${i.talao}`); 
+                i.status = 'Encerrado'; i.desfecho = desfechoFinal; await setDoc(doc(dbFS, "siopm", String(id)), i); window.registrarAuditoria('Deu Baixa no SIOPM Inoperante', `Talão: ${i.talao} -> ${desfechoFinal}`); 
             } else { 
                 if(confirm("Operação Cifrada: Tem certeza absoluta que deseja reabrir um talão já baixado?")) { i.status = 'Aberto'; i.desfecho = ''; await setDoc(doc(dbFS, "siopm", String(id)), i); window.registrarAuditoria('Estornou Baixa SIOPM', `Talão: ${i.talao}`); } 
             } 
         }
 
-       window.listarSiopm = function() { 
-            const tb=document.getElementById('tabelaSiopm'); tb.innerHTML=""; 
-            const fB=document.getElementById('filtroSiopmBpm').value; const fS=document.getElementById('filtroSiopmStatus').value; const dataHoje = window.getDataHoje();
+        window.listarSiopm = function() { 
+            const tb = document.getElementById('tabelaSiopm'); tb.innerHTML = ""; 
+            const fCpa = document.getElementById('filtroSiopmCpa') ? document.getElementById('filtroSiopmCpa').value : 'todos';
+            const fB = document.getElementById('filtroSiopmBpm').value;
+            const fS = document.getElementById('filtroSiopmStatus').value;
+            const fTxt = (document.getElementById('buscaSiopmTexto')?.value || '').toLowerCase().trim();
+            const dataHoje = window.getDataHoje();
+            const bpmsMeuCpa = MAPA_JURISDICAO_CPA[window.postoAtivo] || [];
 
-            let f=window.getDB().siopm.filter(s => {
-                let visivelParaOperador = window.temAcessoTotal() || window.postoAtivo === 'Chefia' || (s.data === dataHoje || s.status === 'Aberto') || s.criadoPor === window.postoAtivo;
-                return visivelParaOperador && (fB === 'todos' || s.bpm === fB) && (fS === 'todos' || s.status === fS);
+            // 1. Filtra os talões que pertencem ao escopo do operador logado (190/Chefia/Admin vê tudo; Supervisor CPA vê apenas os do seu CPA)
+            let baseVisivel = window.getDB().siopm.filter(s => {
+                const ehRecenteOuAberto = (s.data === dataHoje || s.status === 'Aberto');
+                if (!ehRecenteOuAberto && !window.ehVisaoGlobalSiopm()) return false;
+
+                if (window.ehVisaoGlobalSiopm()) return true;
+                const cpaItem = s.cpaDestino || window.descobrirCpaPorBpm(s.bpm);
+                return cpaItem === window.postoAtivo || bpmsMeuCpa.includes(s.bpm) || s.criadoPor === window.postoAtivo;
             });
 
-            if(f.length===0){ tb.innerHTML="<tr><td colspan='7' style='text-align:center; padding:30px; font-weight:bold; color:#718096;'>O banco de dados não acusou inoperância do SIOPM neste turno.</td></tr>"; window.atualizarDashboard(); return; } 
+            // 2. Atualiza os contadores superiores e o Placar por CPA (exclusivo 190 / Chefia / Admin)
+            document.getElementById('siopmCountTotal').innerText = baseVisivel.length;
+            document.getElementById('siopmCountAbertos').innerText = baseVisivel.filter(x => x.status === 'Aberto').length;
+            document.getElementById('siopmCountEncerrados').innerText = baseVisivel.filter(x => x.status === 'Encerrado').length;
+
+            if (window.ehVisaoGlobalSiopm()) {
+                const gridPlacar = document.getElementById('gridPlacarCpaSiopm');
+                if (gridPlacar) {
+                    let htmlPlacar = "";
+                    Object.keys(MAPA_JURISDICAO_CPA).forEach(cpaKey => {
+                        const qtdCpa = baseVisivel.filter(s => (s.cpaDestino || window.descobrirCpaPorBpm(s.bpm)) === cpaKey).length;
+                        const abertosCpa = baseVisivel.filter(s => (s.cpaDestino || window.descobrirCpaPorBpm(s.bpm)) === cpaKey && s.status === 'Aberto').length;
+                        const labelCurto = cpaKey.replace('Supervisor ', '');
+                        const classeAtivo = (fCpa === cpaKey) ? 'ativo' : '';
+                        htmlPlacar += `
+                            <div class="placar-cpa-card ${classeAtivo}" onclick="filtrarSiopmPorCardCpa('${window.eAttr(cpaKey)}')">
+                                <span class="cpa-nome">${window.eH(labelCurto)}</span>
+                                <span class="cpa-num">${qtdCpa}</span>
+                                <small style="font-size:10px; color:${abertosCpa > 0 ? (classeAtivo ? '#fbd38d' : '#e53e3e') : 'inherit'}; font-weight:700;">
+                                    ${abertosCpa} aberto(s)
+                                </small>
+                            </div>
+                        `;
+                    });
+                    gridPlacar.innerHTML = htmlPlacar;
+                }
+            }
+
+            // 3. Aplica os filtros de tela (CPA, BPM, Status e Busca Textual)
+            let f = baseVisivel.filter(s => {
+                const cpaItem = s.cpaDestino || window.descobrirCpaPorBpm(s.bpm);
+                const matchCpa = !window.ehVisaoGlobalSiopm() || fCpa === 'todos' || cpaItem === fCpa;
+                const matchBpm = fB === 'todos' || s.bpm === fB;
+                const matchStatus = fS === 'todos' || s.status === fS;
+                const matchTxt = !fTxt || (s.talao && s.talao.toLowerCase().includes(fTxt)) || (s.natureza && s.natureza.toLowerCase().includes(fTxt)) || (s.bpm && s.bpm.toLowerCase().includes(fTxt));
+                return matchCpa && matchBpm && matchStatus && matchTxt;
+            });
+
+            if(f.length===0){ tb.innerHTML="<tr><td colspan='8' style='text-align:center; padding:30px; font-weight:bold; color:#718096;'>Nenhum talão contingencial localizado para os filtros selecionados.</td></tr>"; window.atualizarDashboard(); return; } 
             
             f.sort((a,b) => String(b.id).localeCompare(String(a.id))).forEach(s=>{
-                let bUser = (window.temAcessoTotal() || window.postoAtivo === 'Chefia') ? `<br><span style="font-size:9px; color:#4a5568; background:#edf2f7; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px; border:1px solid #cbd5e1;">📍 Posto: ${window.eH(s.criadoPor)}</span>` : '';
+                const cpaItem = (s.cpaDestino || window.descobrirCpaPorBpm(s.bpm)).replace('Supervisor ', '');
+                let bUser = window.ehVisaoGlobalSiopm() ? `<br><span style="font-size:9px; color:#4a5568; background:#edf2f7; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px; border:1px solid #cbd5e1;">📍 Origem: ${window.eH(s.criadoPor)}</span>` : '';
                 
-                let podeEditar = (window.temAcessoTotal() || window.postoAtivo === 'Chefia' || s.criadoPor === window.postoAtivo || s.criadoPor === window.currentUserEmail);
-                let btnHtml = podeEditar ? `<button class="btn-action hide-leitura btn ${s.status==="Aberto"?"btn-save":"btn-print"}" style="padding: 6px 12px; margin-right: 5px; font-size: 11px;" onclick="encerrarOuReabrirSiopm('${window.eAttr(s.id)}')">${s.status==="Aberto"?"🔓 Dar Baixa":"🔒 Estornar"}</button> <button class="btn-action btn-del hide-leitura" style="padding: 6px 12px;" onclick="excluirItem('siopm', '${window.eAttr(s.id)}')">🗑️</button>` : '';
+                let podeEditar = (window.ehVisaoGlobalSiopm() || (s.cpaDestino || window.descobrirCpaPorBpm(s.bpm)) === window.postoAtivo || s.criadoPor === window.postoAtivo || s.criadoPor === window.currentUserEmail);
+                let btnHtml = podeEditar ? `
+                    <button class="btn-action hide-leitura btn ${s.status==="Aberto"?"btn-save":"btn-print"}" style="padding: 6px 10px; font-size: 11px; width:auto;" onclick="encerrarOuReabrirSiopm('${window.eAttr(s.id)}')">${s.status==="Aberto"?"🔓 Dar Baixa":"🔒 Estornar"}</button>
+                    <button class="btn-action btn-edit hide-leitura" style="padding: 6px 10px;" onclick="prepararEdicaoSiopm('${window.eAttr(s.id)}')" title="Editar Talão">✏️</button>
+                    <button class="btn-action btn-del hide-leitura" style="padding: 6px 10px;" onclick="excluirItem('siopm', '${window.eAttr(s.id)}')" title="Excluir Talão">🗑️</button>
+                ` : '';
                 
                 let desfechoEstilo = s.desfecho ? `color:#166534; font-weight:bold; background:#f0fdf4; padding:4px 8px; border-radius:4px; border:1px solid #86efac; display:inline-block;` : `color:#a0aec0; font-style:italic;`;
 
-                tb.innerHTML+=`<tr><td class="mono-font" style="font-size:14px; font-weight:bold;">${window.eH(s.data)}${bUser}</td><td><span style="background:#f8fafc; border:1px solid #cbd5e1; padding:6px 10px; border-radius:4px; font-weight:bold; color:#2b6cb0; display:inline-block; white-space:nowrap;">${window.eH(s.bpm)}</span></td><td class="mono-font" style="font-size:15px; color:#1a202c;">${window.eH(s.talao)}</td><td><span style="background:#edf2f7; padding:2px 6px; border-radius:12px; font-size:11px; font-weight:bold;">${window.eH(s.periodo)}</span></td><td><span style="${desfechoEstilo}">${window.eH(s.desfecho||'AGUARDANDO FINALIZAÇÃO TÁTICA')}</span></td><td><span class="badge-siopm ${s.status==="Aberto"?"badge-aberto":"badge-encerrado"}" style="box-shadow:var(--shadow-soft); padding:6px 12px;">${window.eH(s.status)}</span></td><td class="no-print">${btnHtml}</td></tr>`;
+                tb.innerHTML += `
+                    <tr class="${s.status === 'Aberto' ? 'row-urgente' : 'row-sucesso'}">
+                        <td class="mono-font" style="font-size:13px; font-weight:bold;">${window.eH(s.data)}${bUser}</td>
+                        <td>
+                            <div style="font-size:11px; font-weight:800; color:#4a5568; text-transform:uppercase;">${window.eH(cpaItem)}</div>
+                            <span style="background:#f8fafc; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; font-weight:bold; color:#2b6cb0; display:inline-block; margin-top:3px;">${window.eH(s.bpm)}</span>
+                        </td>
+                        <td class="mono-font" style="font-size:16px; font-weight:900; color:#1a202c;">${window.eH(s.talao)}</td>
+                        <td><strong style="color:#2d3748; font-size:13px;">${window.eH(s.natureza || 'NÃO INFORMADA')}</strong></td>
+                        <td><span style="background:#edf2f7; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">${window.eH(s.periodo)}</span></td>
+                        <td><span style="${desfechoEstilo}">${window.eH(s.desfecho||'AGUARDANDO DESFECHO DO CPA')}</span></td>
+                        <td><span class="badge-siopm ${s.status==="Aberto"?"badge-aberto":"badge-encerrado"}" style="box-shadow:var(--shadow-soft); padding:6px 12px;">${window.eH(s.status)}</span></td>
+                        <td class="no-print"><div style="display:flex; gap:5px; flex-wrap:wrap;">${btnHtml}</div></td>
+                    </tr>
+                `;
             }); 
             window.atualizarDashboard(); 
         }
-        window.prepararEdicaoSiopm = function(id) { if(window.bloquearSeLeitura()) return; let i = window.getDB().siopm.find(x => String(x.id) === String(id)); if(!i) return; document.getElementById('sId').value = i.id; document.getElementById('sBpm').value = i.bpm; document.getElementById('sTalao').value = i.talao; document.getElementById('sPeriodo').value = i.periodo; document.getElementById('btnSalvarSiopm').innerText = "💾 Forçar Atualização"; document.getElementById('btnSalvarSiopm').style.background = "#d69e2e"; document.getElementById('btnCancelarSiopm').style.display = "block"; window.scrollTo({top: 0, behavior: 'smooth'}); }
-        window.cancelarEdicaoSiopm = function() { document.getElementById('sId').value = ""; document.getElementById('sBpm').value = ""; document.getElementById('sTalao').value = ""; document.getElementById('sPeriodo').value = "Dia"; document.getElementById('btnSalvarSiopm').innerText = "➕ Gerar Talão"; document.getElementById('btnSalvarSiopm').style.background = "#48bb78"; document.getElementById('btnCancelarSiopm').style.display = "none"; }
+
+        window.prepararEdicaoSiopm = function(id) {
+            if(window.bloquearSeLeitura()) return;
+            let i = window.getDB().siopm.find(x => String(x.id) === String(id)); if(!i) return;
+            document.getElementById('formSiopmArea').classList.add('modo-edicao-ativo');
+            document.getElementById('sId').value = i.id;
+            const cpaItem = i.cpaDestino || window.descobrirCpaPorBpm(i.bpm);
+            if (document.getElementById('sCpa')) {
+                document.getElementById('sCpa').value = cpaItem;
+                window.aoMudarCpaSiopm();
+            }
+            document.getElementById('sBpm').value = i.bpm;
+            document.getElementById('sTalao').value = i.talao;
+            document.getElementById('sNatureza').value = i.natureza || '';
+            document.getElementById('sPeriodo').value = i.periodo;
+            document.getElementById('btnSalvarSiopm').innerText = "💾 Atualizar Talão";
+            document.getElementById('btnSalvarSiopm').style.background = "#d69e2e";
+            document.getElementById('btnCancelarSiopm').style.display = "inline-block";
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        window.cancelarEdicaoSiopm = function() {
+            document.getElementById('formSiopmArea').classList.remove('modo-edicao-ativo');
+            document.getElementById('sId').value = "";
+            document.getElementById('sBpm').value = "";
+            document.getElementById('sTalao').value = "";
+            document.getElementById('sNatureza').value = "";
+            document.getElementById('sPeriodo').value = "Dia";
+            document.getElementById('btnSalvarSiopm').innerText = "➕ Enviar Talão p/ CPA";
+            document.getElementById('btnSalvarSiopm').style.background = "#48bb78";
+            document.getElementById('btnCancelarSiopm').style.display = "none";
+        }
 
         window.excluirItem = async function(tabela, id) { 
             if(window.bloquearSeLeitura()) return;
