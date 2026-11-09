@@ -195,11 +195,16 @@
             .print-title-oco { background-color: #e53e3e !important; }
             .print-title-guincho { background-color: #d69e2e !important; }
             .print-title-siopm { background-color: #38a169 !important; }
-            .print-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 25px; page-break-inside: auto; border: 1px solid #cbd5e1;}
-            .print-table th { background-color: #2d3748 !important; color: white !important; padding: 8px; text-align: left; border-bottom: 1px solid #cbd5e1; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; position: static !important; }
-            .print-table td { padding: 8px; border-bottom: 1px solid #cbd5e1; color: #2d3748; }
+            
+            /* Ajuste Folha A4 - Força table layout fixed para garantir proporções e quebra de linha nas tabelas impressas */
+            .print-table { table-layout: fixed; width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 25px; page-break-inside: auto; border: 1px solid #cbd5e1;}
+            .print-table th { background-color: #2d3748 !important; color: white !important; padding: 6px; text-align: left; border-bottom: 1px solid #cbd5e1; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; position: static !important; }
+            .print-table td { padding: 6px; border-bottom: 1px solid #cbd5e1; color: #2d3748; word-wrap: break-word; overflow-wrap: break-word; }
             .print-table tr { page-break-inside: avoid; page-break-after: auto; }
             .print-table tr:nth-child(even) td { background-color: #f7fafc !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            
+            #tabelaSiopm td { word-wrap: break-word; overflow-wrap: break-word; }
+            
             .print-oco-card { background-color: #fff5f5 !important; border: 1px solid #feb2b2; border-left: 5px solid #e53e3e !important; padding: 15px; margin-top: 10px; margin-bottom: 15px; border-radius: 4px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; page-break-inside: avoid; }
             .print-bpm-header { background-color: #edf2f7 !important; color: #2b6cb0 !important; font-weight: bold; padding: 8px 10px; border-left: 4px solid #2b6cb0 !important; margin: 15px 0 5px 0; font-size: 13px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; page-break-after: avoid;}
             .print-row-cfp td { background-color: #fff5f5 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -393,14 +398,14 @@
                 <table>
                     <thead>
                         <tr>
-                            <th style="width: 105px;">Data</th>
-                            <th style="width: 140px;">CPA / BPM Destino</th>
-                            <th style="width: 110px;">Nº Talão</th>
+                            <th style="width: 85px;">Data</th>
+                            <th style="width: 130px;">CPA / BPM Destino</th>
+                            <th style="width: 90px;">Nº Talão</th>
                             <th>Natureza (M-16)</th>
-                            <th style="width: 80px;">Período</th>
-                            <th>Desfecho</th>
-                            <th style="width: 100px;">Status</th>
-                            <th class="no-print" style="width: 170px;">Ações</th>
+                            <th style="width: 70px;">Período</th>
+                            <th style="width: 200px;">Desfecho</th>
+                            <th style="width: 90px;">Status</th>
+                            <th class="no-print" style="width: 110px;">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tabelaSiopm"></tbody>
@@ -1329,7 +1334,7 @@
 
                 html += `<div style="margin-bottom:30px;"><h3 class="print-section-title print-title-guincho">3. ACIONAMENTOS DE GUINCHO CIVIL</h3>`;
                 if (guinchosTurno.length===0) html += `<p>Nenhum acionamento de guincho.</p>`; else {
-                    html += `<table class="print-table"><thead><tr><th>Data/Hora</th><th>Motorista / CPF</th><th>Placa</th><th>BPM / Op.</th><th>Talão</th><th>Recolha / Endereço / Pátio</th><th>Status</th></tr></thead><tbody>`;
+                    html += `<table class="print-table"><thead><tr><th style="width:13%">Data/Hora</th><th style="width:22%">Motorista / CPF</th><th style="width:10%">Placa</th><th style="width:13%">BPM / Op.</th><th style="width:10%">Talão</th><th style="width:24%">Recolha / Endereço / Pátio</th><th style="width:8%">Status</th></tr></thead><tbody>`;
                     guinchosTurno.forEach(g => {
                         let motCad = window.localizarMotoristaPorNome(g.motNome);
                         let cpfVal = g.motCpf || (motCad ? motCad.cpf : '');
@@ -1341,9 +1346,10 @@
                     html += `</tbody></table>`;
                 } html += `</div>`;
 
+                // Aplicação da Etapa 3: Proporções exatas em % para garantir layout A4 na tabela do SIOPM
                 html += `<div style="margin-bottom:30px;"><h3 class="print-section-title print-title-siopm">4. SISTEMA SIOPM (INOPERANTE)</h3>`;
                 if (sio.length===0) html += `<p>Nenhum talão de inoperância gerado.</p>`; else {
-                    html += `<table class="print-table"><thead><tr><th>Data</th><th>CPA / BPM</th><th>Talão</th><th>Natureza</th><th>Período</th><th>Desfecho</th><th>Status</th></tr></thead><tbody>`;
+                    html += `<table class="print-table"><thead><tr><th style="width:10%">Data</th><th style="width:18%">CPA / BPM</th><th style="width:12%">Talão</th><th style="width:15%">Natureza</th><th style="width:8%">Período</th><th style="width:27%">Desfecho (Ações)</th><th style="width:10%">Status</th></tr></thead><tbody>`;
                     sio.forEach(s => {
                         let cpaLabel = (s.cpaDestino || window.descobrirCpaPorBpm(s.bpm)).replace('Supervisor ', '');
                         html += `<tr><td>${window.eH(s.data)}</td><td><strong>${window.eH(cpaLabel)}</strong> - ${window.eH(s.bpm)}</td><td>${window.eH(s.talao)}</td><td>${window.eH(s.natureza || '-')}</td><td>${window.eH(s.periodo)}</td><td style="color:#718096; font-style:italic;">${window.eH(s.desfecho||'-')}</td><td><strong>${window.eH(s.status)}</strong></td></tr>`;
@@ -1622,7 +1628,7 @@
             if(!termo) return resDiv.innerHTML = "<div style='background:#fff5f5; color:#c53030; padding:15px; border-radius:8px; font-weight:700; border-left:5px solid #e53e3e;'>⚠️ Aviso Operacional: O campo de busca está vazio. Digite um talão para continuar.</div>";
             resDiv.innerHTML = "<div style='background:#ebf8ff; color:#2b6cb0; padding:15px; border-radius:8px; font-weight:700;'><em>⏳ Vasculhando os arquivos confidenciais do servidor (Busca limitada aos 100 mais recentes por segurança)...</em></div>";
             try {
-                // Bugfix: Evita estourar leituras no Firebase baixando tudo. Adicionado limit(100) para otimização inicial.
+                // Prevenção contra estouro de leitura no Firebase. Limita a 100.
                 const snap = await getDocs(query(collection(dbFS, "ocorrencias"), orderBy("id", "desc"), limit(100)));
                 let resultados = [];
                 snap.forEach(d => { let o = d.data(); if ((o.talao && o.talao.toLowerCase().includes(termo)) || (o.bpm && o.bpm.toLowerCase().includes(termo)) || (o.historico && o.historico.toLowerCase().includes(termo))) { resultados.push(o); } });
@@ -2026,10 +2032,11 @@
                 obj.desfecho = ant ? ant.desfecho : '';
                 obj.criadoPor = ant ? ant.criadoPor : window.postoAtivo;
 
-                // Lógica de Redirecionamento Automático: Atualiza Desfecho e Reabre a Ocorrência na nova mesa
+                // Lógica de Redirecionamento Automático com Assinatura da Mesa
                 if (ant && (ant.cpaDestino !== cpaDestino || ant.bpm !== b)) {
                     let bpmCurto = b.split('º')[0] || b;
-                    obj.desfecho = `Redirecionado p/ ${bpmCurto}`;
+                    let origemCurto = window.postoAtivo.replace('Supervisor ', '');
+                    obj.desfecho = `Redirecionado p/ ${bpmCurto} por ${origemCurto}`;
                     obj.status = 'Aberto';
                 }
             } 
@@ -2052,12 +2059,21 @@
             if(!podeAlterar) return alert(`🚫 ACESSO RESTRITO: Apenas o 190 ou o Supervisor do ${cpaDoTalao} podem dar baixa neste talão.`);
 
             if(i.status === 'Aberto') { 
-                let desfechoFinal = ""; let opcao = prompt("Comando Central de Encerramento\n\n1 - Ocorrência resolvida com Novo Talão SIOPM\n2 - Encerrada no local / Sem novidade");
-                if(opcao === "1") { let numSiopm = prompt("Nº do novo Talão de Fechamento:"); if(!numSiopm) return; desfechoFinal = `T. SIOPM: ${numSiopm} (${i.bpm})`; } 
-                else if (opcao === "2") { desfechoFinal = `Encerrado pelo ${window.postoAtivo}`; }
-                else { return; }
+                let numSiopm = prompt("Para encerrar a contingência, informe o Nº do novo Talão SIOPM gerado.\n(Ou deixe em branco caso tenha sido resolvido sem talão)");
+                if (numSiopm === null) return; // Operador clicou em Cancelar
+                
+                let desfechoFinal = "";
+                let origemBaixa = window.postoAtivo.replace('Supervisor ', '');
+                
+                if (numSiopm.trim() !== "") {
+                    desfechoFinal = `T. SIOPM: ${numSiopm.trim()} (${origemBaixa})`;
+                } else {
+                    desfechoFinal = `Encerrado por ${origemBaixa} (Sem talão)`;
+                }
 
-                i.status = 'Encerrado'; i.desfecho = desfechoFinal; await setDoc(doc(dbFS, "siopm", String(id)), i); window.registrarAuditoria('Deu Baixa no SIOPM Inoperante', `Talão: ${i.talao} -> ${desfechoFinal}`); 
+                i.status = 'Encerrado'; i.desfecho = desfechoFinal; 
+                await setDoc(doc(dbFS, "siopm", String(id)), i); 
+                window.registrarAuditoria('Deu Baixa no SIOPM Inoperante', `Talão: ${i.talao} -> ${desfechoFinal}`); 
             } else { 
                 if(confirm("Operação Cifrada: Tem certeza absoluta que deseja reabrir um talão já baixado?")) { i.status = 'Aberto'; i.desfecho = ''; await setDoc(doc(dbFS, "siopm", String(id)), i); window.registrarAuditoria('Estornou Baixa SIOPM', `Talão: ${i.talao}`); } 
             } 
@@ -2076,7 +2092,7 @@
 
             const bpmsMeuCpa = MAPA_JURISDICAO_CPA[window.postoAtivo] || [];
 
-            // 1. Filtra os talões visíveis pelo operador
+            // 1. Filtra os talões visíveis pelo operador - Mantém Hoje e Ontem + Qualquer um Aberto (Corrige virada de turno)
             let baseVisivel = window.getDB().siopm.filter(s => {
                 const ehRecenteOuAberto = (s.data === dataHoje || s.data === dataOntem || s.status === 'Aberto');
                 if (!ehRecenteOuAberto && !window.ehVisaoGlobalSiopm()) return false;
@@ -2131,10 +2147,12 @@
                 let bUser = window.ehVisaoGlobalSiopm() ? `<br><span style="font-size:9px; color:#4a5568; background:#edf2f7; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px; border:1px solid #cbd5e1;">📍 Origem: ${window.eH(s.criadoPor)}</span>` : '';
                 
                 let podeEditar = (window.ehVisaoGlobalSiopm() || (s.cpaDestino || window.descobrirCpaPorBpm(s.bpm)) === window.postoAtivo || s.criadoPor === window.postoAtivo || s.criadoPor === window.currentUserEmail);
+                
+                // Botões unificados SIOPM (Baixa, Editar, Excluir)
                 let btnHtml = podeEditar ? `
-                    <button class="btn-action hide-leitura btn ${s.status==="Aberto"?"btn-save":"btn-print"}" style="padding: 6px 10px; font-size: 11px; width:auto;" onclick="encerrarOuReabrirSiopm('${window.eAttr(s.id)}')">${s.status==="Aberto"?"🔓 Dar Baixa":"🔒 Estornar"}</button>
-                    <button class="btn-action btn-edit hide-leitura" style="padding: 6px 10px;" onclick="prepararEdicaoSiopm('${window.eAttr(s.id)}')" title="Editar Talão">✏️</button>
-                    <button class="btn-action btn-del hide-leitura" style="padding: 6px 10px;" onclick="excluirItem('siopm', '${window.eAttr(s.id)}')" title="Excluir Talão">🗑️</button>
+                    <button class="btn-action hide-leitura btn ${s.status==="Aberto"?"btn-save":"btn-restore"}" style="padding: 6px 10px; font-size: 11px; width:auto; ${s.status!=="Aberto"?'background:#718096;':''}" onclick="encerrarOuReabrirSiopm('${window.eAttr(s.id)}')">${s.status==="Aberto"?"🔓 Dar Baixa":"🔒 Estornar"}</button>
+                    <button class="btn-action btn-edit hide-leitura" style="padding: 6px 10px;" onclick="prepararEdicaoSiopm('${window.eAttr(s.id)}')" title="Editar ou Redirecionar Talão">✏️</button>
+                    <button class="btn-action btn-del hide-leitura" style="padding: 6px 10px;" onclick="excluirItem('siopm', '${window.eAttr(s.id)}')" title="Excluir Talão Definitivamente">🗑️</button>
                 ` : '';
                 
                 let desfechoEstilo = s.desfecho ? `color:#166534; font-weight:bold; background:#f0fdf4; padding:4px 8px; border-radius:4px; border:1px solid #86efac; display:inline-block;` : `color:#a0aec0; font-style:italic;`;
@@ -2165,7 +2183,10 @@
             document.getElementById('sId').value = i.id;
             
             // Trava edição do Talão caso não seja Comando Geral
-            document.getElementById('sTalao').readOnly = !window.ehVisaoGlobalSiopm();
+            if (!window.ehVisaoGlobalSiopm()) {
+                document.getElementById('sTalao').setAttribute('readonly', 'true');
+                document.getElementById('sTalao').style.backgroundColor = '#edf2f7';
+            }
 
             const cpaItem = i.cpaDestino || window.descobrirCpaPorBpm(i.bpm);
             if (document.getElementById('sCpa')) {
@@ -2187,7 +2208,10 @@
             document.getElementById('sId').value = "";
             document.getElementById('sBpm').value = "";
             document.getElementById('sTalao').value = "";
-            document.getElementById('sTalao').readOnly = false;
+            
+            document.getElementById('sTalao').removeAttribute('readonly');
+            document.getElementById('sTalao').style.backgroundColor = '#fff';
+
             document.getElementById('sNatureza').value = "";
             document.getElementById('sPeriodo').value = "Dia";
             document.getElementById('btnSalvarSiopm').innerText = "➕ Enviar Talão p/ CPA";
@@ -2201,19 +2225,23 @@
 
             let info = window.getDB()[tabela].find(x => String(x.id) === String(id)); if(!info) return;
             
-            // Validação de Exclusão SIOPM e Geral
+            // Regra definitiva SIOPM & Geral de Lixeira
             let podeExcluir = false;
+            
             if (window.temAcessoTotal() || window.postoAtivo === 'Chefia') {
                 podeExcluir = true;
             } else if (info.criadoPor === window.currentUserEmail || info.criadoPor === window.postoAtivo) {
+                // O próprio autor tem permissão
                 podeExcluir = true;
             } else if (tabela === 'siopm') {
-                const cpaDoTalao = info.cpaDestino || window.descobrirCpaPorBpm(info.bpm);
-                if (cpaDoTalao === window.postoAtivo) podeExcluir = true;
+                // A exclusão no SIOPM é travada para evitar que o CPA de destino apague a contingência enviada pelo 190.
+                // Mas, conforme alinhado, fica restrita à MESA QUE CRIOU ou ao Comando.
+                // Como essa condição já está tratada acima (info.criadoPor), o else permanece false.
+                podeExcluir = false;
             }
 
             if(!podeExcluir) { 
-                return alert("Alerta de Segurança: Você só possui permissão para desativar arquivos gerados por si próprio ou da sua jurisdição."); 
+                return alert("🚫 Acesso Negado: A exclusão definitiva é restrita à mesa que criou o talão original ou ao Comando Superior."); 
             }
             
             if(confirm("Deseja realmente pulverizar este registro das matrizes principais do Comando?")) { 
