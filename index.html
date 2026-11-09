@@ -171,8 +171,8 @@
         body.status-pendente #box-relatorio-dashboard { display: none !important; }
 
         /* ============================================================================
-           [ANCORA-TELA-190] E PERFIL CHEFIA - REGRAS DE VISIBILIDADE E SUPERVISÃO
-           ============================================================================ */
+            [ANCORA-TELA-190] E PERFIL CHEFIA - REGRAS DE VISIBILIDADE E SUPERVISÃO
+            ============================================================================ */
         body.is-chefia #btn-menu-guinchos { display: none !important; }
         body.is-chefia .chefia-hide-create:not(.modo-edicao-ativo) { display: none !important; }
 
@@ -683,7 +683,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot, getDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot, getDoc, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA8x03EfniEJuUiPgy2OsKU5z-5t-MgpGc",
@@ -843,7 +843,8 @@
             return false;
         };
 
-        window.gId = function() { return Date.now(); };
+        // Gerador de ID sem colisão adicionando sufixo aleatório curto (Garante que se mantém Numérico Timestamp)
+        window.gId = function() { return Date.now() + Math.floor(Math.random() * 1000); };
         
         window.setOnlineStatus = async function(isOnline) {
             if(window.currentUserEmail) { 
@@ -965,16 +966,68 @@
             }
         });
 
-        window.iniciarMonitoramentoPostos = function() {
-            onSnapshot(collection(dbFS, "mesa_operacoes"), (snap) => {
+        let unsubMesas = null;
+        function windowIniciarMonitoramentoPostos() {
+            if(unsubMesas) unsubMesas();
+            unsubMesas = onSnapshot(collection(dbFS, "mesa_operacoes"), (snap) => {
                 window.postosOcupados = {};
                 snap.docs.forEach(d => window.postosOcupados[d.id] = d.data().user);
                 window.desenharPostos();
                 window.atualizarPainelMesaAdmin(); 
+                
+                // Active Kick: Se a mesa atual for assumida por outro ou deletada
+                if (window.postoAtivo && window.postoAtivo !== "Aguardando Aprovação") {
+                    const ocupante = window.postosOcupados[window.postoAtivo];
+                    if (!ocupante || ocupante !== window.currentUserEmail) {
+                        alert("⚠️ A sua mesa de operações foi desconectada ou assumida pelo Comando Master.");
+                        window.fazerLogout();
+                        return;
+                    }
+                }
+
                 if(!window.postoAtivo || window.postoAtivo === "Aguardando Aprovação") {
                     document.getElementById('role-selection-screen').style.display = 'flex';
                 }
             });
+        }
+        window.iniciarMonitoramentoPostos = windowIniciarMonitoramentoPostos;
+
+        let unsubListenersAtivos = [];
+        function iniciarSincronizacaoFirebase() {
+            unsubListenersAtivos.forEach(unsub => unsub());
+            unsubListenersAtivos = [];
+
+            const limite4Dias = Date.now() - (4 * 24 * 60 * 60 * 1000);
+
+            ['efetivo', 'motoristas'].forEach(colName => {
+                const unsub = onSnapshot(collection(dbFS, colName), (snapshot) => {
+                    window.sgidb[colName] = snapshot.docs.map(d => d.data()); window.atualizarTudo();
+                });
+                unsubListenersAtivos.push(unsub);
+            });
+
+            const unsubPerfis = onSnapshot(collection(dbFS, "perfis"), (snapshot) => {
+                window.sgidb.perfis = {}; snapshot.docs.forEach(d => { window.sgidb.perfis[d.id] = d.data(); });
+                window.atualizarTudo();
+            });
+            unsubListenersAtivos.push(unsubPerfis);
+
+            ['ocorrencias', 'guinchos', 'mapaForca', 'siopm'].forEach(colName => {
+                const q = query(collection(dbFS, colName), where("id", ">=", limite4Dias));
+                const unsub = onSnapshot(q, (snapshot) => {
+                    window.sgidb[colName] = snapshot.docs.map(d => d.data()); window.atualizarTudo();
+                });
+                unsubListenersAtivos.push(unsub);
+            });
+
+            if(window.temAcessoTotal()) {
+                const qAud = query(collection(dbFS, "auditoria"), where("ts", ">=", limite4Dias));
+                const unsubAud = onSnapshot(qAud, (snapshot) => {
+                    window.sgidb.auditoria = snapshot.docs.map(d => d.data()).sort((a,b) => b.ts - a.ts); 
+                    if(document.getElementById('tela-auditoria').classList.contains('active')) window.listarAuditoria();
+                });
+                unsubListenersAtivos.push(unsubAud);
+            }
         }
 
         window.desenharPostos = function() {
@@ -1064,7 +1117,7 @@
                                 <span style="font-size:14px; font-weight:bold;">${window.eH(userEmail)}</span>
                             </div>
                             <div style="font-size:11px; font-weight:bold; color:#c53030; background: #fed7d7; padding: 5px 10px; border-radius: 4px;">❌ DERRUBAR</div>
-                         </div>`;
+                       </div>`;
             });
             if(cont === 0) html += `<p style="font-size:13px; color:#718096; margin-left:5px;">Nenhum operador conectado em mesa no momento.</p>`;
             html += `</div>`;
@@ -1076,36 +1129,6 @@
             if(confirm(`Tem a certeza que deseja derrubar a conexão da mesa de ${posto}? O operador será deslogado.`)) {
                 await deleteDoc(doc(dbFS, "mesa_operacoes", posto));
                 window.registrarAuditoria('Derrubou Operador', `Forçou saída da mesa: ${posto}`);
-            }
-        }
-
-        function iniciarSincronizacaoFirebase() {
-            const limite4Dias = Date.now() - (4 * 24 * 60 * 60 * 1000);
-
-            ['efetivo', 'motoristas'].forEach(colName => {
-                onSnapshot(collection(dbFS, colName), (snapshot) => {
-                    window.sgidb[colName] = snapshot.docs.map(d => d.data()); window.atualizarTudo();
-                });
-            });
-
-            onSnapshot(collection(dbFS, "perfis"), (snapshot) => {
-                window.sgidb.perfis = {}; snapshot.docs.forEach(d => { window.sgidb.perfis[d.id] = d.data(); });
-                window.atualizarTudo();
-            });
-
-            ['ocorrencias', 'guinchos', 'mapaForca', 'siopm'].forEach(colName => {
-                const q = query(collection(dbFS, colName), where("id", ">=", limite4Dias));
-                onSnapshot(q, (snapshot) => {
-                    window.sgidb[colName] = snapshot.docs.map(d => d.data()); window.atualizarTudo();
-                });
-            });
-
-            if(window.temAcessoTotal()) {
-                const qAud = query(collection(dbFS, "auditoria"), where("ts", ">=", limite4Dias));
-                onSnapshot(qAud, (snapshot) => {
-                    window.sgidb.auditoria = snapshot.docs.map(d => d.data()).sort((a,b) => b.ts - a.ts); 
-                    if(document.getElementById('tela-auditoria').classList.contains('active')) window.listarAuditoria();
-                });
             }
         }
 
@@ -1140,24 +1163,22 @@
             const selFiltroCpa = document.getElementById('filtroSiopmCpa');
             const painelPlacar = document.getElementById('painelPlacar190');
 
+            // 1113 - Roteamento Livre: Qualquer CPA tem acesso a todos os CPAs para redirecionamento.
+            let cpaOpts = `<option value="">Todos / Selecionar CPA...</option>`;
+            let fCpaOpts = `<option value="todos">Todos os CPAs</option>`;
+            Object.keys(MAPA_JURISDICAO_CPA).forEach(cpa => {
+                const labelCurto = cpa.replace('Supervisor ', '');
+                cpaOpts += `<option value="${window.eH(cpa)}">${window.eH(labelCurto)}</option>`;
+                fCpaOpts += `<option value="${window.eH(cpa)}">${window.eH(labelCurto)}</option>`;
+            });
+            selSCpa.innerHTML = cpaOpts;
+            selSCpa.disabled = false; // ABERTO A TODOS
+            
+            selFiltroCpa.innerHTML = fCpaOpts;
             if (window.ehVisaoGlobalSiopm()) {
-                let cpaOpts = `<option value="">Todos / Selecionar CPA...</option>`;
-                let fCpaOpts = `<option value="todos">Todos os CPAs</option>`;
-                Object.keys(MAPA_JURISDICAO_CPA).forEach(cpa => {
-                    const labelCurto = cpa.replace('Supervisor ', '');
-                    cpaOpts += `<option value="${window.eH(cpa)}">${window.eH(labelCurto)}</option>`;
-                    fCpaOpts += `<option value="${window.eH(cpa)}">${window.eH(labelCurto)}</option>`;
-                });
-                selSCpa.innerHTML = cpaOpts;
-                selSCpa.disabled = false;
-                selFiltroCpa.innerHTML = fCpaOpts;
                 selFiltroCpa.style.display = 'inline-block';
                 if (painelPlacar) painelPlacar.style.display = 'block';
             } else {
-                const cpaAtual = MAPA_JURISDICAO_CPA[window.postoAtivo] ? window.postoAtivo : "";
-                selSCpa.innerHTML = `<option value="${window.eH(cpaAtual)}">${window.eH(cpaAtual.replace('Supervisor ', '') || 'Geral')}</option>`;
-                selSCpa.value = cpaAtual;
-                selSCpa.disabled = true;
                 selFiltroCpa.style.display = 'none';
                 if (painelPlacar) painelPlacar.style.display = 'none';
             }
@@ -1168,7 +1189,7 @@
         window.aoMudarCpaSiopm = function() {
             const cpaSelecionado = document.getElementById('sCpa').value;
             const todasUnidades = window.obterTodasUnidadesMapeadas();
-            const listaBpms = MAPA_JURISDICAO_CPA[cpaSelecionado] || (MAPA_JURISDICAO_CPA[window.postoAtivo] || todasUnidades);
+            const listaBpms = MAPA_JURISDICAO_CPA[cpaSelecionado] || todasUnidades;
 
             let sBpmHtml = `<option value="">Selecione o BPM...</option>`;
             let fBpmHtml = `<option value="todos">Todos os BPMs</option>`;
@@ -1599,12 +1620,13 @@
             const termo = document.getElementById('buscaServidorTalao').value.toLowerCase().trim();
             const resDiv = document.getElementById('resultadoArquivo');
             if(!termo) return resDiv.innerHTML = "<div style='background:#fff5f5; color:#c53030; padding:15px; border-radius:8px; font-weight:700; border-left:5px solid #e53e3e;'>⚠️ Aviso Operacional: O campo de busca está vazio. Digite um talão para continuar.</div>";
-            resDiv.innerHTML = "<div style='background:#ebf8ff; color:#2b6cb0; padding:15px; border-radius:8px; font-weight:700;'><em>⏳ Vasculhando os arquivos confidenciais do servidor...</em></div>";
+            resDiv.innerHTML = "<div style='background:#ebf8ff; color:#2b6cb0; padding:15px; border-radius:8px; font-weight:700;'><em>⏳ Vasculhando os arquivos confidenciais do servidor (Busca limitada aos 100 mais recentes por segurança)...</em></div>";
             try {
-                const snap = await getDocs(collection(dbFS, "ocorrencias"));
+                // Bugfix: Evita estourar leituras no Firebase baixando tudo. Adicionado limit(100) para otimização inicial.
+                const snap = await getDocs(query(collection(dbFS, "ocorrencias"), orderBy("id", "desc"), limit(100)));
                 let resultados = [];
                 snap.forEach(d => { let o = d.data(); if ((o.talao && o.talao.toLowerCase().includes(termo)) || (o.bpm && o.bpm.toLowerCase().includes(termo)) || (o.historico && o.historico.toLowerCase().includes(termo))) { resultados.push(o); } });
-                if(resultados.length === 0) return resDiv.innerHTML = "<div style='background:#f8fafc; color:#718096; padding:15px; border-radius:8px; border:1px solid #e2e8f0;'>Nenhuma ocorrência encontrada correspondente aos dados inseridos.</div>";
+                if(resultados.length === 0) return resDiv.innerHTML = "<div style='background:#f8fafc; color:#718096; padding:15px; border-radius:8px; border:1px solid #e2e8f0;'>Nenhuma ocorrência encontrada correspondente aos dados inseridos nos últimos 100 registros.</div>";
                 resultados.sort((a,b) => String(b.id).localeCompare(String(a.id)));
                 
                 window.resultadosBuscaArquivo = resultados; 
@@ -1990,24 +2012,33 @@
             if(existe) return alert(`🚫 ADVERTÊNCIA DE DUPLICIDADE: O talão ${t} (${b}) já foi lançado hoje pela mesa: ${existe.criadoPor}.`);
             
             let obj = { id: id, cpaDestino: cpaDestino, bpm: b, talao: t, natureza: nat, periodo: p }; 
+            
+            let ant = document.getElementById('sId').value ? window.getDB().siopm.find(s => String(s.id) === String(id)) : null;
+            
             if(!document.getElementById('sId').value) {
                 obj.data = window.getDataHoje();
                 obj.status = 'Aberto';
                 obj.desfecho = '';
                 obj.criadoPor = window.postoAtivo || window.currentUserEmail;
             } else {
-                let ant = window.getDB().siopm.find(s => String(s.id) === String(id));
                 obj.data = ant ? ant.data : window.getDataHoje();
                 obj.status = ant ? ant.status : 'Aberto';
                 obj.desfecho = ant ? ant.desfecho : '';
                 obj.criadoPor = ant ? ant.criadoPor : window.postoAtivo;
+
+                // Lógica de Redirecionamento Automático: Atualiza Desfecho e Reabre a Ocorrência na nova mesa
+                if (ant && (ant.cpaDestino !== cpaDestino || ant.bpm !== b)) {
+                    let bpmCurto = b.split('º')[0] || b;
+                    obj.desfecho = `Redirecionado p/ ${bpmCurto}`;
+                    obj.status = 'Aberto';
+                }
             } 
             
             const btn = document.getElementById('btnSalvarSiopm');
             if (btn) btn.disabled = true;
             try {
                 await setDoc(doc(dbFS, "siopm", String(id)), obj);
-                window.registrarAuditoria('Gerou Talão Contingência SIOPM', `Talão: ${t} | Destino: ${cpaDestino} (${b}) | Nat: ${nat}`);
+                window.registrarAuditoria('Gerou/Editou Talão Contingência SIOPM', `Talão: ${t} | Destino: ${cpaDestino} (${b}) | Nat: ${nat}`);
                 window.cancelarEdicaoSiopm();
             } catch (error) { alert("🚫 O servidor central recusou a permissão."); }
             finally { if (btn) btn.disabled = false; }
@@ -2021,10 +2052,9 @@
             if(!podeAlterar) return alert(`🚫 ACESSO RESTRITO: Apenas o 190 ou o Supervisor do ${cpaDoTalao} podem dar baixa neste talão.`);
 
             if(i.status === 'Aberto') { 
-                let desfechoFinal = ""; let opcao = prompt("Comando Central de Encerramento\n\n1 - Ocorrência resolvida com Novo Talão SIOPM\n2 - Ocorrência redirecionada para outra Fração Tática\n3 - Encerrada no local / Sem novidade");
+                let desfechoFinal = ""; let opcao = prompt("Comando Central de Encerramento\n\n1 - Ocorrência resolvida com Novo Talão SIOPM\n2 - Encerrada no local / Sem novidade");
                 if(opcao === "1") { let numSiopm = prompt("Nº do novo Talão de Fechamento:"); if(!numSiopm) return; desfechoFinal = `T. SIOPM: ${numSiopm} (${i.bpm})`; } 
-                else if (opcao === "2") { let bpmRed = prompt("Informe a Fração ou BPM redirecionado:"); if(!bpmRed) return; desfechoFinal = `Redirecionado p/ ${bpmRed}`; } 
-                else if (opcao === "3") { desfechoFinal = `Encerrado pelo ${window.postoAtivo}`; }
+                else if (opcao === "2") { desfechoFinal = `Encerrado pelo ${window.postoAtivo}`; }
                 else { return; }
 
                 i.status = 'Encerrado'; i.desfecho = desfechoFinal; await setDoc(doc(dbFS, "siopm", String(id)), i); window.registrarAuditoria('Deu Baixa no SIOPM Inoperante', `Talão: ${i.talao} -> ${desfechoFinal}`); 
@@ -2040,11 +2070,15 @@
             const fS = document.getElementById('filtroSiopmStatus').value;
             const fTxt = (document.getElementById('buscaSiopmTexto')?.value || '').toLowerCase().trim();
             const dataHoje = window.getDataHoje();
+            
+            const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+            const dataOntem = window.formatarDataBR(ontem);
+
             const bpmsMeuCpa = MAPA_JURISDICAO_CPA[window.postoAtivo] || [];
 
-            // 1. Filtra os talões que pertencem ao escopo do operador logado (190/Chefia/Admin vê tudo; Supervisor CPA vê apenas os do seu CPA)
+            // 1. Filtra os talões visíveis pelo operador
             let baseVisivel = window.getDB().siopm.filter(s => {
-                const ehRecenteOuAberto = (s.data === dataHoje || s.status === 'Aberto');
+                const ehRecenteOuAberto = (s.data === dataHoje || s.data === dataOntem || s.status === 'Aberto');
                 if (!ehRecenteOuAberto && !window.ehVisaoGlobalSiopm()) return false;
 
                 if (window.ehVisaoGlobalSiopm()) return true;
@@ -2052,7 +2086,7 @@
                 return cpaItem === window.postoAtivo || bpmsMeuCpa.includes(s.bpm) || s.criadoPor === window.postoAtivo;
             });
 
-            // 2. Atualiza os contadores superiores e o Placar por CPA (exclusivo 190 / Chefia / Admin)
+            // 2. Atualiza os contadores
             document.getElementById('siopmCountTotal').innerText = baseVisivel.length;
             document.getElementById('siopmCountAbertos').innerText = baseVisivel.filter(x => x.status === 'Aberto').length;
             document.getElementById('siopmCountEncerrados').innerText = baseVisivel.filter(x => x.status === 'Encerrado').length;
@@ -2080,7 +2114,7 @@
                 }
             }
 
-            // 3. Aplica os filtros de tela (CPA, BPM, Status e Busca Textual)
+            // 3. Aplica os filtros de tela
             let f = baseVisivel.filter(s => {
                 const cpaItem = s.cpaDestino || window.descobrirCpaPorBpm(s.bpm);
                 const matchCpa = !window.ehVisaoGlobalSiopm() || fCpa === 'todos' || cpaItem === fCpa;
@@ -2129,6 +2163,10 @@
             let i = window.getDB().siopm.find(x => String(x.id) === String(id)); if(!i) return;
             document.getElementById('formSiopmArea').classList.add('modo-edicao-ativo');
             document.getElementById('sId').value = i.id;
+            
+            // Trava edição do Talão caso não seja Comando Geral
+            document.getElementById('sTalao').readOnly = !window.ehVisaoGlobalSiopm();
+
             const cpaItem = i.cpaDestino || window.descobrirCpaPorBpm(i.bpm);
             if (document.getElementById('sCpa')) {
                 document.getElementById('sCpa').value = cpaItem;
@@ -2149,6 +2187,7 @@
             document.getElementById('sId').value = "";
             document.getElementById('sBpm').value = "";
             document.getElementById('sTalao').value = "";
+            document.getElementById('sTalao').readOnly = false;
             document.getElementById('sNatureza').value = "";
             document.getElementById('sPeriodo').value = "Dia";
             document.getElementById('btnSalvarSiopm').innerText = "➕ Enviar Talão p/ CPA";
@@ -2161,8 +2200,26 @@
             if(tabela === 'motoristas') return;
 
             let info = window.getDB()[tabela].find(x => String(x.id) === String(id)); if(!info) return;
-            if(!window.temAcessoTotal() && window.postoAtivo !== 'Chefia' && info.criadoPor !== window.currentUserEmail && info.criadoPor !== window.postoAtivo) { return alert("Alerta de Segurança: Você só possui permissão para desativar arquivos gerados por si próprio."); }
-            if(confirm("Deseja realmente pulverizar este registro das matrizes principais do Comando?")) { await deleteDoc(doc(dbFS, tabela, String(id))); window.registrarAuditoria('Desintegrou Registo', `Pacote [${tabela}]`); } 
+            
+            // Validação de Exclusão SIOPM e Geral
+            let podeExcluir = false;
+            if (window.temAcessoTotal() || window.postoAtivo === 'Chefia') {
+                podeExcluir = true;
+            } else if (info.criadoPor === window.currentUserEmail || info.criadoPor === window.postoAtivo) {
+                podeExcluir = true;
+            } else if (tabela === 'siopm') {
+                const cpaDoTalao = info.cpaDestino || window.descobrirCpaPorBpm(info.bpm);
+                if (cpaDoTalao === window.postoAtivo) podeExcluir = true;
+            }
+
+            if(!podeExcluir) { 
+                return alert("Alerta de Segurança: Você só possui permissão para desativar arquivos gerados por si próprio ou da sua jurisdição."); 
+            }
+            
+            if(confirm("Deseja realmente pulverizar este registro das matrizes principais do Comando?")) { 
+                await deleteDoc(doc(dbFS, tabela, String(id))); 
+                window.registrarAuditoria('Desintegrou Registo', `Pacote [${tabela}]`); 
+            } 
         }
 
         window.preAprovarMilitar = async function() {
